@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,18 +28,21 @@ public class ProductoRestController {
 	@Autowired
 	IProductoService productoService;
 
+	@PreAuthorize("hasAuthority('PRODUCTO_VER')")
 	@GetMapping("/{id}")
 	public ResponseEntity<ResultadoProc<Producto>> findById(@PathVariable("id") int productoId) {
 		ResultadoProc<Producto> salida = productoService.findById(productoId);
 		return new ResponseEntity<ResultadoProc<Producto>>(salida, HttpStatus.OK);
 	}
 
+	@PreAuthorize("hasAuthority('PRODUCTO_VER')")
 	@GetMapping("/id/active")
 	public ResponseEntity<ResultadoProc<Producto>> findByIdAndActiveTrue(@PathVariable int productoId) {
 		ResultadoProc<Producto> salida = productoService.findByIdAndActivoTrue(productoId);
 		return new ResponseEntity<ResultadoProc<Producto>>(salida, HttpStatus.OK);
 	}
 
+	@PreAuthorize("hasAuthority('PRODUCTO_LISTAR')")
 	@GetMapping("/page-all")
 	public ResponseEntity<ResultadoProc<Page<Producto>>> findAllPaginated(
 			@RequestBody SearchPagination<String> searchPagination) {
@@ -47,6 +51,7 @@ public class ProductoRestController {
 		return new ResponseEntity<ResultadoProc<Page<Producto>>>(salida, HttpStatus.OK);
 	}
 
+	@PreAuthorize("hasAuthority('PRODUCTO_LISTAR')")
 	@PostMapping("/page-with-filters")
 	public ResponseEntity<ResultadoProc<Page<Producto>>> findAllPaginatedWithFilters(
 			@RequestBody SearchPagination<ProductoFilter> searchPagination) {
@@ -58,9 +63,16 @@ public class ProductoRestController {
 		return new ResponseEntity<ResultadoProc<Page<Producto>>>(salida, HttpStatus.OK);
 	}
 
+	@PreAuthorize("hasAuthority('PRODUCTO_CREAR')")
 	@PostMapping
-	@PutMapping
 	public ResponseEntity<ResultadoProc<Producto>> save(@RequestBody Producto producto) {
+		ResultadoProc<Producto> salida = productoService.save(producto);
+		return new ResponseEntity<ResultadoProc<Producto>>(salida, HttpStatus.OK);
+	}
+
+	@PreAuthorize("hasAuthority('PRODUCTO_EDITAR')")
+	@PutMapping
+	public ResponseEntity<ResultadoProc<Producto>> update(@RequestBody Producto producto) {
 		ResultadoProc<Producto> salida = productoService.save(producto);
 		return new ResponseEntity<ResultadoProc<Producto>>(salida, HttpStatus.OK);
 	}

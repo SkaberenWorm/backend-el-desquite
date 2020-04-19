@@ -15,7 +15,7 @@ public interface IUsuarioService {
 	 * @return ResultadoProc&lt;Usuario&gt; El usuario que coincida con el email o
 	 *         el user
 	 */
-	ResultadoProc<Usuario> findByEmailOrUsuario(String emailOrUsuario);
+	ResultadoProc<Usuario> findByEmail(String emailOrUsuario);
 
 	/**
 	 * Busca un usuario por su ID.

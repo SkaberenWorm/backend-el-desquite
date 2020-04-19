@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Data
-@Table(name = "caracteristicas")
+@Table(name = "producto_caracteristicas")
 @NoArgsConstructor
 public class ProductoCaracteristica implements Serializable {
 

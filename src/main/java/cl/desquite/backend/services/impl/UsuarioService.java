@@ -1,7 +1,10 @@
 package cl.desquite.backend.services.impl;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,7 +17,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import cl.desquite.backend.entities.Privilegio;
 import cl.desquite.backend.entities.Role;
 import cl.desquite.backend.entities.Usuario;
 import cl.desquite.backend.entities.UsuarioRole;
@@ -37,15 +42,51 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 	BCryptPasswordEncoder passwordEncoder;
 
 	@Override
-	public ResultadoProc<Usuario> findByEmailOrUsuario(String emailOrUser) {
+	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+		email = email.toLowerCase().trim();
+		Usuario usuario = usuarioRepository.findByEmail(email);
+		if (usuario == null) {
+			log.info("Usuario ingresado no existe");
+			throw new UsernameNotFoundException("Usuario o Clave incorrectos");
+		}
+
+		return new User(email, usuario.getClave(), true, true, true, true, getAuthorities(usuario.getRoles()));
+	}
+
+	private Collection<? extends GrantedAuthority> getAuthorities(Collection<Role> roles) {
+		return getGrantedAuthorities(getPrivileges(roles));
+	}
+
+	private Set<String> getPrivileges(Collection<Role> roles) {
+		Set<String> privileges = new HashSet<String>();
+		Set<Privilegio> collection = new HashSet<Privilegio>();
+		for (Role role : roles) {
+			collection.addAll(role.getPrivilegios());
+		}
+		for (Privilegio item : collection) {
+			privileges.add(item.getNombre());
+		}
+		return privileges;
+	}
+
+	private List<GrantedAuthority> getGrantedAuthorities(Set<String> privileges) {
+		List<GrantedAuthority> authorities = new ArrayList<>();
+		for (String privilege : privileges) {
+			authorities.add(new SimpleGrantedAuthority(privilege));
+		}
+		return authorities;
+	}
+
+	@Override
+	public ResultadoProc<Usuario> findByEmail(String email) {
 		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
 		try {
-			Usuario usuario = usuarioRepository.findByEmailOrUser(emailOrUser);
+			Usuario usuario = usuarioRepository.findByEmail(email);
 			salida.setResultado(usuario);
 			salida.setMensaje("Usuario encontrado correctamente");
 			if (usuario == null) {
 				salida.setError(true);
-				salida.setMensaje("No se ha encontrado el usuario " + emailOrUser);
+				salida.setMensaje("No se ha encontrado el usuario " + email);
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
@@ -53,21 +94,6 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 			salida.setMensaje("Se produjo un error inesperado al intentar obtener el usuario");
 		}
 		return salida;
-	}
-
-	@Override
-	public UserDetails loadUserByUsername(String emailOrUser) throws UsernameNotFoundException {
-		emailOrUser = emailOrUser.toLowerCase().trim();
-		Usuario usuario = usuarioRepository.findByEmailOrUser(emailOrUser);
-		if (usuario == null) {
-			log.info("Usuario ingresado no existe");
-			throw new UsernameNotFoundException("Usuario o Clave incorrectos");
-		}
-		List<GrantedAuthority> grantedAuths = new ArrayList<>();
-		for (UsuarioRole rol : usuario.getRoles()) {
-			grantedAuths.add(new SimpleGrantedAuthority(rol.getRol().getNombre()));
-		}
-		return new User(emailOrUser, usuario.getClave(), true, true, true, true, grantedAuths);
 	}
 
 	@Override
@@ -125,6 +151,7 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 		return salida;
 	}
 
+	@Transactional
 	@Override
 	public ResultadoProc<Usuario> save(Usuario usuario) {
 		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
@@ -150,16 +177,22 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 			}
 			usuarioRepository.save(usuario);
 			List<UsuarioRole> roles = asignarRoles(usuario);
+
+			ResultadoProc<Boolean> salidaDelete = usuarioRolesService.deleteAllByUsuario(usuario);
+			if (salidaDelete.isError()) {
+				salida.setError(true);
+				salida.setMensaje(salidaDelete.getMensaje());
+				return salida;
+			}
 			ResultadoProc<List<UsuarioRole>> salidaRoles = usuarioRolesService.saveAll(roles);
 			if (salidaRoles.isError()) {
 				salida.setError(true);
 				salida.setMensaje(
-						"El usuario fue registrado correctamente, pero ocurrio un problema al intentar asgnar el o los reoles");
+						"El usuario fue registrado correctamente, pero ocurrio un problema al intentar asignar el o los roles");
 				return salida;
 			}
+
 			salida.setMensaje(mensaje);
-			usuario.setRoles(roles);
-			salida.setResultado(usuario);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			String accion = usuario.getId() > 0 ? "actualizar" : "registrar";
@@ -199,12 +232,8 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 
 	private List<UsuarioRole> asignarRoles(Usuario usuario) {
 		List<UsuarioRole> roles = new ArrayList<>();
-		for (int i = 0; i < usuario.getRoles().size(); i++) {
-			UsuarioRole usuarioRole = new UsuarioRole();
-			usuarioRole.setId(usuario.getRoles().get(i).getId());
-			usuarioRole.setRol(new Role(usuario.getRoles().get(i).getRol().getId()));
-			usuarioRole.setUsuario(new Usuario(usuario.getId()));
-			roles.add(usuarioRole);
+		for (Role rol : usuario.getRoles()) {
+			roles.add(new UsuarioRole(0, usuario, rol));
 		}
 		return roles;
 	}
@@ -216,7 +245,7 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 	 * @return si es <code>true</code> es porque el usuario esta registrado
 	 */
 	private boolean isRegistered(Usuario usuario) {
-		if (this.findByEmailOrUsuario(usuario.getEmail()).getResultado() != null) {
+		if (this.findByEmail(usuario.getEmail()).getResultado() != null) {
 			return true;
 		} else {
 			return false;

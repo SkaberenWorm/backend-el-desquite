@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Data
-@Table(name = "medio_pagos")
+@Table(name = "facturas")
 @NoArgsConstructor
 public class Factura implements Serializable {
 

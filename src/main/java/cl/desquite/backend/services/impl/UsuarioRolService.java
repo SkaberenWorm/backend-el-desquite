@@ -4,7 +4,9 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import cl.desquite.backend.entities.Usuario;
 import cl.desquite.backend.entities.UsuarioRole;
 import cl.desquite.backend.repositories.UsuarioRolRepository;
 import cl.desquite.backend.services.IUsuarioRolService;
@@ -31,6 +33,23 @@ public class UsuarioRolService implements IUsuarioRolService {
 			log.error(e.getMessage(), e);
 			salida.setError(true);
 			salida.setMensaje("Se produjo un error al intentar asignar los roles al usuario");
+		}
+		return salida;
+
+	}
+
+	@Override
+	@Transactional
+	public ResultadoProc<Boolean> deleteAllByUsuario(Usuario usuario) {
+		ResultadoProc<Boolean> salida = new ResultadoProc<Boolean>();
+		try {
+			usuarioRolRepository.deleteAllByUsuario(usuario);
+			salida.setError(false);
+			salida.setResultado(true);
+		} catch (Exception e) {
+			salida.setError(true);
+			salida.setMensaje("Se produjo un error al intentar eliminar los roles actuales del usuario");
+			salida.setResultado(false);
 		}
 		return salida;
 

@@ -15,10 +15,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 	/**
 	 * 
 	 * @param emailOrUser (Email o user del usuario)
-	 * @return El usuario que coincida con el email o el user
+	 * @return El usuario que coincida con el email
 	 */
-	@Query("select u from Usuario u where u.email = ?1 or u.user = ?1")
-	Usuario findByEmailOrUser(String emailOrUser);
+	@Query("select u from Usuario u where u.email = ?1")
+	Usuario findByEmail(String email);
 
 	/**
 	 * Retorna un {@link Page} de todos los usuarios que coinciden con la query

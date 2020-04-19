@@ -1,11 +1,16 @@
 package cl.desquite.backend.entities;
 
 import java.io.Serializable;
+import java.util.Set;
 
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 
 import lombok.Data;
@@ -30,4 +35,7 @@ public class Role implements Serializable {
 		this.id = id;
 	}
 
+	@ManyToMany(fetch = FetchType.EAGER)
+	@JoinTable(name = "rol_privilegios", joinColumns = @JoinColumn(name = "rol_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "privilegio_id", referencedColumnName = "id"))
+	private Set<Privilegio> privilegios;
 }

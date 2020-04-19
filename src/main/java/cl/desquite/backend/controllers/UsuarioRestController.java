@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,18 +26,21 @@ public class UsuarioRestController {
 	@Autowired
 	IUsuarioService usuarioService;
 
+	@PreAuthorize("hasAuthority('USUARIO_VER')")
 	@GetMapping("/{id}")
 	public ResponseEntity<ResultadoProc<Usuario>> findById(@PathVariable("id") int usuarioId) {
 		ResultadoProc<Usuario> salida = usuarioService.findById(usuarioId);
 		return new ResponseEntity<ResultadoProc<Usuario>>(salida, HttpStatus.OK);
 	}
 
+	@PreAuthorize("hasAuthority('USUARIO_VER')")
 	@GetMapping("/{id}/active")
 	public ResponseEntity<ResultadoProc<Usuario>> findByIdAndActiveTrue(@PathVariable("id") int usuarioId) {
 		ResultadoProc<Usuario> salida = usuarioService.findByIdAndActivoTrue(usuarioId);
 		return new ResponseEntity<ResultadoProc<Usuario>>(salida, HttpStatus.OK);
 	}
 
+	@PreAuthorize("hasAuthority('USUARIO_LISTAR')")
 	@PostMapping("/page-with-filters")
 	public ResponseEntity<ResultadoProc<Page<Usuario>>> findAllPaginatedWithFilters(
 			@RequestBody SearchPagination<String> searchPagination) {
@@ -46,15 +50,23 @@ public class UsuarioRestController {
 		return new ResponseEntity<ResultadoProc<Page<Usuario>>>(salida, HttpStatus.OK);
 	}
 
+	@PreAuthorize("hasAuthority('USUARIO_EDITAR')")
 	@GetMapping("/change-state/{id}")
 	public ResponseEntity<ResultadoProc<Usuario>> changeState(@PathVariable("id") int usuarioId) {
 		ResultadoProc<Usuario> salida = usuarioService.changeState(usuarioId);
 		return new ResponseEntity<ResultadoProc<Usuario>>(salida, HttpStatus.OK);
 	}
 
+	@PreAuthorize("hasAuthority('USUARIO_CREAR')")
 	@PostMapping
-	@PutMapping
 	public ResponseEntity<ResultadoProc<Usuario>> save(@RequestBody Usuario usuario) {
+		ResultadoProc<Usuario> salida = usuarioService.save(usuario);
+		return new ResponseEntity<ResultadoProc<Usuario>>(salida, HttpStatus.OK);
+	}
+
+	@PreAuthorize("hasAuthority('USUARIO_EDITAR')")
+	@PutMapping
+	public ResponseEntity<ResultadoProc<Usuario>> update(@RequestBody Usuario usuario) {
 		ResultadoProc<Usuario> salida = usuarioService.save(usuario);
 		return new ResponseEntity<ResultadoProc<Usuario>>(salida, HttpStatus.OK);
 	}
