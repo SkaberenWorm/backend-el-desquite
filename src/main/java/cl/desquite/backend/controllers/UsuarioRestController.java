@@ -67,7 +67,7 @@ public class UsuarioRestController {
 	@PreAuthorize("hasAuthority('USUARIO_EDITAR')")
 	@PutMapping
 	public ResponseEntity<ResultadoProc<Usuario>> update(@RequestBody Usuario usuario) {
-		ResultadoProc<Usuario> salida = usuarioService.save(usuario);
+		ResultadoProc<Usuario> salida = usuarioService.update(usuario);
 		return new ResponseEntity<ResultadoProc<Usuario>>(salida, HttpStatus.OK);
 	}
 

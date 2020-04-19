@@ -46,10 +46,10 @@ public interface IUsuarioService {
 	ResultadoProc<Page<Usuario>> findAllPaginatedWithFilters(PageRequest pageable, String buscador);
 
 	/**
-	 * Guarda o actualiza un usuario
+	 * Registra un nuevo usuario
 	 * 
 	 * @param usuario {@link Usuario}
-	 * @return ResultadoProc&lt;Usuario&gt; Usuario guardado/actualizado
+	 * @return ResultadoProc&lt;Usuario&gt; Usuario guardado
 	 */
 	ResultadoProc<Usuario> save(Usuario usuario);
 
@@ -65,5 +65,13 @@ public interface IUsuarioService {
 	 *         estado
 	 */
 	ResultadoProc<Usuario> changeState(int usuarioId);
+
+	/**
+	 * Actualiza un usuario
+	 * 
+	 * @param usuario {@link Usuario}
+	 * @return ResultadoProc&lt;Usuario&gt; Usuario actualizado
+	 */
+	ResultadoProc<Usuario> update(Usuario usuario);
 
 }

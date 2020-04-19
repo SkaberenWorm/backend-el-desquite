@@ -27,10 +27,10 @@ public interface IProductoService {
 	ResultadoProc<Producto> findByIdAndActivoTrue(int productoId);
 
 	/**
-	 * Guarda o actualiza un producto
+	 * Guarda un producto
 	 * 
 	 * @param producto {@link Producto}
-	 * @return ResultadoProc&lt;Producto&gt; Producto guardado/actualizado
+	 * @return ResultadoProc&lt;Producto&gt; Producto guardado
 	 */
 	ResultadoProc<Producto> save(Producto producto);
 
@@ -50,7 +50,8 @@ public interface IProductoService {
 	 *                     paginación
 	 * @param buscador     Texto usado para filtrar por el nombre y descripcion del
 	 *                     producto
-	 * @param categoriasId Listado de los ID de las categorías
+	 * @param categoriasId Listado de los ID de las categorías, si es null solo te
+	 *                     filtrará por el buscador
 	 * @return ResultadoProc&lt;Page&lt;Producto&gt;&gt; Una página de productos
 	 *         coincidentes con los filtros
 	 */
@@ -69,5 +70,13 @@ public interface IProductoService {
 	 *         estado
 	 */
 	ResultadoProc<Producto> changeState(int productoId);
+
+	/**
+	 * Actualiza un producto
+	 * 
+	 * @param producto {@link Producto}
+	 * @return ResultadoProc&lt;Producto&gt; Producto actualizado
+	 */
+	ResultadoProc<Producto> update(Producto productoParam);
 
 }

@@ -31,7 +31,7 @@ public class AutorizationServerConfig extends AuthorizationServerConfigurerAdapt
 
 	@Override
 	public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
-		security.tokenKeyAccess("perrmitAll()").checkTokenAccess("isAuthenticated()");
+		security.tokenKeyAccess("permitAll()").checkTokenAccess("isAuthenticated()");
 	}
 
 	@Override

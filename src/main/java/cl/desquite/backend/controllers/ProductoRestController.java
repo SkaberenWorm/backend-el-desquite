@@ -73,7 +73,7 @@ public class ProductoRestController {
 	@PreAuthorize("hasAuthority('PRODUCTO_EDITAR')")
 	@PutMapping
 	public ResponseEntity<ResultadoProc<Producto>> update(@RequestBody Producto producto) {
-		ResultadoProc<Producto> salida = productoService.save(producto);
+		ResultadoProc<Producto> salida = productoService.update(producto);
 		return new ResponseEntity<ResultadoProc<Producto>>(salida, HttpStatus.OK);
 	}
 

@@ -157,6 +157,51 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
 		try {
 			String mensaje = "";
+			if (usuario.getId() == 0) {
+				if (this.isRegistered(usuario)) {
+					salida.setError(true);
+					salida.setMensaje("El usuario con el email " + usuario.getEmail() + " ya se encuentra registrado");
+					return salida;
+				}
+				mensaje = "Usuario registrado correctamente";
+				usuario.setClave(passwordEncoder.encode(usuario.getClave()));
+
+				usuarioRepository.save(usuario);
+				List<UsuarioRole> roles = asignarRoles(usuario);
+
+				ResultadoProc<Boolean> salidaDelete = usuarioRolesService.deleteAllByUsuario(usuario);
+				if (salidaDelete.isError()) {
+					salida.setError(true);
+					salida.setMensaje(salidaDelete.getMensaje());
+					return salida;
+				}
+				ResultadoProc<List<UsuarioRole>> salidaRoles = usuarioRolesService.saveAll(roles);
+				if (salidaRoles.isError()) {
+					salida.setError(true);
+					salida.setMensaje(
+							"El usuario fue registrado correctamente, pero ocurrio un problema al intentar asignar el o los roles");
+					return salida;
+				}
+				salida.setMensaje(mensaje);
+			} else {
+				salida.setError(true);
+				salida.setMensaje("Se está intentando editar un usuario, esta acción no está permitida");
+			}
+
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			String accion = usuario.getId() > 0 ? "actualizar" : "registrar";
+			salida.setMensaje("Se produjo un error inesperado al intentar " + accion + " el usuario");
+		}
+		return salida;
+	}
+
+	@Transactional
+	@Override
+	public ResultadoProc<Usuario> update(Usuario usuario) {
+		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
+		try {
+			String mensaje = "";
 			if (usuario.getId() > 0) {
 				mensaje = "Usuario actualizado correctamente";
 				Usuario usuarioOriginal = this.findById(usuario.getId()).getResultado();
@@ -166,33 +211,29 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 					return salida;
 				}
 				usuario.setClave(usuarioOriginal.getClave());
-			} else {
-				if (this.isRegistered(usuario)) {
+
+				usuarioRepository.save(usuario);
+				List<UsuarioRole> roles = asignarRoles(usuario);
+
+				ResultadoProc<Boolean> salidaDelete = usuarioRolesService.deleteAllByUsuario(usuario);
+				if (salidaDelete.isError()) {
 					salida.setError(true);
-					salida.setMensaje("El usuario con el email " + usuario.getEmail() + " ya se encuentra registrado");
+					salida.setMensaje(salidaDelete.getMensaje());
 					return salida;
 				}
-				mensaje = "Usuario registrado correctamente";
-				usuario.setClave(passwordEncoder.encode(usuario.getClave()));
-			}
-			usuarioRepository.save(usuario);
-			List<UsuarioRole> roles = asignarRoles(usuario);
+				ResultadoProc<List<UsuarioRole>> salidaRoles = usuarioRolesService.saveAll(roles);
+				if (salidaRoles.isError()) {
+					salida.setError(true);
+					salida.setMensaje(
+							"El usuario fue registrado correctamente, pero ocurrio un problema al intentar asignar el o los roles");
+					return salida;
+				}
 
-			ResultadoProc<Boolean> salidaDelete = usuarioRolesService.deleteAllByUsuario(usuario);
-			if (salidaDelete.isError()) {
+				salida.setMensaje(mensaje);
+			} else {
 				salida.setError(true);
-				salida.setMensaje(salidaDelete.getMensaje());
-				return salida;
+				salida.setMensaje("Se está intentando registrar un usuario, esta acción no está permitida");
 			}
-			ResultadoProc<List<UsuarioRole>> salidaRoles = usuarioRolesService.saveAll(roles);
-			if (salidaRoles.isError()) {
-				salida.setError(true);
-				salida.setMensaje(
-						"El usuario fue registrado correctamente, pero ocurrio un problema al intentar asignar el o los roles");
-				return salida;
-			}
-
-			salida.setMensaje(mensaje);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			String accion = usuario.getId() > 0 ? "actualizar" : "registrar";
