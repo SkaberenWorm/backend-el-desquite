@@ -12,6 +12,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -38,4 +39,15 @@ public class Role implements Serializable {
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "rol_privilegios", joinColumns = @JoinColumn(name = "rol_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "privilegio_id", referencedColumnName = "id"))
 	private Set<Privilegio> privilegios;
+
+	@Transient
+	private String privilegiosString;
+
+	public String getPrivilegiosString() {
+		String privilegiosDescrip = "";
+		for (Privilegio privilegio : this.privilegios) {
+			privilegiosDescrip += privilegio.getDescripcion() + "\n";
+		}
+		return privilegiosDescrip;
+	}
 }

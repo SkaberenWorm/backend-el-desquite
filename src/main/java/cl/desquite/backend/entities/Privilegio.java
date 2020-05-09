@@ -30,8 +30,8 @@ public class Privilegio implements Serializable {
 		this.id = id;
 	}
 
-//	@ManyToMany(mappedBy = "privilegios")
-//	@JsonIgnoreProperties(value = { "privilegios" })
-//	private List<Role> roles;
+	// @ManyToMany(mappedBy = "privilegios")
+	// @JsonIgnoreProperties(value = { "privilegios" })
+	// private List<Role> roles;
 
 }

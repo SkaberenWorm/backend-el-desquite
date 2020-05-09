@@ -12,6 +12,7 @@ import cl.desquite.backend.entities.Producto;
 import cl.desquite.backend.repositories.ImagenProductoRepository;
 import cl.desquite.backend.services.IImagenProductoService;
 import cl.desquite.backend.util.ResultadoProc;
+import cl.desquite.backend.util.ResultadoProc.Builder;
 import lombok.extern.apachecommons.CommonsLog;
 
 @Service
@@ -23,70 +24,65 @@ public class ImagenProdutoService implements IImagenProductoService {
 
 	@Override
 	public ResultadoProc<List<ImagenProducto>> saveAll(List<ImagenProducto> imagenes) {
-		ResultadoProc<List<ImagenProducto>> salida = new ResultadoProc<List<ImagenProducto>>();
+		Builder<List<ImagenProducto>> salida = new Builder<List<ImagenProducto>>();
 		try {
-			salida.setResultado(imagenProductoRepository.saveAll(imagenes));
+			imagenProductoRepository.saveAll(imagenes);
 			if (imagenes.size() > 1) {
-				salida.setMensaje("Imágenes guardadas correctamente");
+				salida.exitoso(imagenes, "Imágenes guardadas correctamente");
 			} else {
-				salida.setMensaje("Imágen guardada correctamente");
+				salida.exitoso(imagenes, "Imágen guardada correctamente");
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setError(true);
 			if (imagenes.size() > 1) {
-				salida.setMensaje("Se produjo un error al intentar guardar las imágenes del producto");
+				salida.fallo("Se produjo un error al intentar guardar las imágenes del producto");
 			} else {
-				salida.setMensaje("Se produjo un error al intentar guardar la imágen del producto");
+				salida.fallo("Se produjo un error al intentar guardar la imágen del producto");
 			}
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<List<ImagenProducto>> findAllByProducto(Producto producto) {
-		ResultadoProc<List<ImagenProducto>> salida = new ResultadoProc<List<ImagenProducto>>();
+		Builder<List<ImagenProducto>> salida = new Builder<List<ImagenProducto>>();
 		try {
-			salida.setResultado(imagenProductoRepository.findAllByProducto(producto));
+			salida.exitoso(imagenProductoRepository.findAllByProducto(producto));
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setError(true);
-			salida.setMensaje("Se produjo un error al intentar obtener las imágenes del producto");
-
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<Boolean> deleteAll(List<ImagenProducto> imagenes) {
-		ResultadoProc<Boolean> salida = new ResultadoProc<Boolean>();
+		Builder<Boolean> salida = new Builder<Boolean>();
 		try {
 			imagenProductoRepository.deleteAll(imagenes);
-			salida.setResultado(true);
 			if (imagenes.size() > 1) {
-				salida.setMensaje("Imágenes eliminadas correctamente");
+				salida.exitoso(true, "Imágenes eliminadas correctamente");
 			} else {
-				salida.setMensaje("Imágen eliminada correctamente");
+				salida.exitoso(true, "Imágen eliminada correctamente");
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setError(true);
 			if (imagenes.size() > 1) {
-				salida.setMensaje("Se produjo un error al intentar eliminar las imágenes del producto");
+				salida.fallo("Se produjo un error al intentar eliminar las imágenes del producto");
 			} else {
-				salida.setMensaje("Se produjo un error al intentar eliminar la imágen del producto");
+				salida.fallo("Se produjo un error al intentar eliminar la imágen del producto");
 			}
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Transactional
 	@Override
 	public ResultadoProc<Boolean> compareChangesAndSave(List<ImagenProducto> imagenesNew,
 			List<ImagenProducto> imagenesOld) {
-		ResultadoProc<Boolean> salida = new ResultadoProc<Boolean>();
+		Builder<Boolean> salida = new Builder<Boolean>();
 		try {
 			String mensajeSalida = "";
+			boolean isError = false;
 			// Verificamos si los listados contienen las mismas imágenes
 			boolean mismoListado = false;
 			if (imagenesNew.size() == imagenesOld.size()) {
@@ -105,8 +101,8 @@ public class ImagenProdutoService implements IImagenProductoService {
 			}
 
 			if (mismoListado) {
-				salida.setResultado(true);
-				return salida;
+				salida.exitoso(true);
+				return salida.build();
 			}
 			// Fin => Verificamos si los listados contienen las mismas imágenes
 
@@ -125,7 +121,7 @@ public class ImagenProdutoService implements IImagenProductoService {
 			}
 			if (imagenesToSave.size() > 0) {
 				if (this.saveAll(imagenesToSave).isError()) {
-					salida.setError(true);
+					isError = true;
 					if (imagenesToSave.size() > 1) {
 						mensajeSalida += "Se produjo un error al intentar agregar las nuevas imágenes <br>";
 					} else {
@@ -150,7 +146,7 @@ public class ImagenProdutoService implements IImagenProductoService {
 			}
 			if (imagenesToDelete.size() > 0) {
 				if (this.deleteAll(imagenesToDelete).isError()) {
-					salida.setError(true);
+					isError = true;
 					if (imagenesToDelete.size() > 1) {
 						mensajeSalida += "Se produjo un error al intentar eliminar las imágenes antiguas<br>";
 					} else {
@@ -159,16 +155,15 @@ public class ImagenProdutoService implements IImagenProductoService {
 				}
 			}
 			// FIN => Eliminar imágenes antiguas
-
-			salida.setMensaje(mensajeSalida);
-			salida.setResultado(true);
-
+			if (isError) {
+				salida.fallo(mensajeSalida);
+			} else {
+				salida.exitoso(true, mensajeSalida);
+			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setError(true);
-			salida.setResultado(false);
-			salida.setMensaje("Se produjo un error al intentar guardar las imágenes del producto");
+			salida.fallo("Se produjo un error al intentar guardar las imágenes del producto");
 		}
-		return salida;
+		return salida.build();
 	}
 }

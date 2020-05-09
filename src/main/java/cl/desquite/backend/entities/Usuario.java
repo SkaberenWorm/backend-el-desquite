@@ -18,8 +18,6 @@ import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -42,7 +40,8 @@ public class Usuario implements Serializable {
 	@Column(name = "correo")
 	private String email;
 	@JsonIgnore
-	private String clave;
+	@Column(name = "clave")
+	private String password;
 	private boolean activo;
 	@Transient
 	private String nombreCompleto;
@@ -51,20 +50,20 @@ public class Usuario implements Serializable {
 		this.id = id;
 	}
 
-	@Transient
-	@JsonInclude(value = Include.NON_NULL)
-	private String password;
+//	@Transient
+//	@JsonInclude(value = Include.NON_NULL)
+//	private String password;
+//
+//	public void setPassword(String password) {
+//		this.clave = password;
+//		this.password = password;
+//	}
+//
+//	public String getPassword() {
+//		return null;
+//	}
 
-	public void setPassword(String password) {
-		this.clave = password;
-		this.password = password;
-	}
-
-	public String getPassword() {
-		return null;
-	}
-
-	@JsonIgnoreProperties(value = { "privilegios", "activo" })
+	@JsonIgnoreProperties(value = { "activo" })
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "usuario_roles", joinColumns = @JoinColumn(name = "usuario_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "rol_id", referencedColumnName = "id"))
 	private Set<Role> roles;

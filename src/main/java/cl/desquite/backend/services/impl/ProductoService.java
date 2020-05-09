@@ -14,6 +14,7 @@ import cl.desquite.backend.repositories.ProductoRepository;
 import cl.desquite.backend.services.IImagenProductoService;
 import cl.desquite.backend.services.IProductoService;
 import cl.desquite.backend.util.ResultadoProc;
+import cl.desquite.backend.util.ResultadoProc.Builder;
 import lombok.extern.apachecommons.CommonsLog;
 
 @Service
@@ -27,63 +28,57 @@ public class ProductoService implements IProductoService {
 
 	@Override
 	public ResultadoProc<Producto> findById(int productoId) {
-		ResultadoProc<Producto> salida = new ResultadoProc<Producto>();
+		Builder<Producto> salida = new Builder<Producto>();
 		try {
 			Producto producto = productoRepository.findById(productoId).orElse(null);
 			if (producto == null) {
-				salida.setError(true);
-				salida.setMensaje("No se ha encontrado el producto con el código " + productoId);
+				salida.fallo("No se ha encontrado el producto con el código " + productoId);
 			}
-			salida.setResultado(producto);
+			salida.exitoso(producto);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setMensaje(
-					"Se produjo un error inesperado al intentar obtener el producto con el código " + productoId);
+			salida.fallo("Se produjo un error inesperado al intentar obtener el producto con el código " + productoId);
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<Producto> findByIdAndActivoTrue(int productoId) {
-		ResultadoProc<Producto> salida = new ResultadoProc<Producto>();
+		Builder<Producto> salida = new Builder<Producto>();
 		try {
 			Producto producto = productoRepository.findById(productoId).orElse(null);
-			salida.setResultado(producto);
+			salida.exitoso(producto);
 
 			if (producto == null) {
-				salida.setError(true);
-				salida.setMensaje("No se ha encontrado el producto con el código " + productoId);
+				salida.fallo("No se ha encontrado el producto con el código " + productoId);
 			}
 			if (!producto.isActivo()) {
-				salida.setError(true);
-				salida.setMensaje("El producto con el código " + productoId + " se encuentra inactivo");
-				salida.setResultado(null);
+				salida.fallo("El producto con el código " + productoId + " se encuentra inactivo");
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setMensaje(
-					"Se produjo un error inesperado al intentar obtener el producto con el código " + productoId);
+			salida.fallo("Se produjo un error inesperado al intentar obtener el producto con el código " + productoId);
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<Page<Producto>> findAllPaginated(PageRequest pageable) {
-		ResultadoProc<Page<Producto>> salida = new ResultadoProc<Page<Producto>>();
+		Builder<Page<Producto>> salida = new Builder<Page<Producto>>();
 		try {
 			Page<Producto> productos = productoRepository.findAll(pageable);
-			salida.setResultado(productos);
+			salida.exitoso(productos);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setMensaje("Se produjo un error inesperado al intentar listar los productos");
+			salida.fallo("Se produjo un error inesperado al intentar listar los productos");
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<Page<Producto>> findAllPaginatedWithFilters(PageRequest pageable, String buscador,
 			List<Integer> categoriasId) {
-		ResultadoProc<Page<Producto>> salida = new ResultadoProc<Page<Producto>>();
+		Builder<Page<Producto>> salida = new Builder<Page<Producto>>();
 		try {
 			Page<Producto> productos;
 			if (!(categoriasId != null && categoriasId.size() > 0)) {
@@ -91,17 +86,17 @@ public class ProductoService implements IProductoService {
 			} else {
 				productos = productoRepository.findAllByQueryAndCategories(buscador, categoriasId, pageable);
 			}
-			salida.setResultado(productos);
+			salida.exitoso(productos);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setMensaje("Se produjo un error inesperado al intentar listar los productos");
+			salida.fallo("Se produjo un error inesperado al intentar listar los productos");
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<Producto> save(Producto productoParam) {
-		ResultadoProc<Producto> salida = new ResultadoProc<Producto>();
+		Builder<Producto> salida = new Builder<Producto>();
 		try {
 			String mensaje = "";
 			if (productoParam.getId() == 0) {
@@ -111,31 +106,27 @@ public class ProductoService implements IProductoService {
 				producto.setImagenes(this.asignarProducto(producto.getImagenes(), producto));
 				ResultadoProc<List<ImagenProducto>> imagenes = imagenProductoService.saveAll(producto.getImagenes());
 				if (imagenes.isError()) {
-					salida.setError(true);
-					salida.setMensaje(imagenes.getMensaje());
-					return salida;
+					salida.fallo(imagenes.getMensaje());
+					return salida.build();
 				}
 
-				producto.setImagenes(imagenes.getResultado());
-				salida.setResultado(producto);
-				salida.setMensaje(mensaje);
-				salida.setResultado(producto);
+				producto.setImagenes(imagenes.getSalida());
+				salida.exitoso(producto, mensaje);
 			} else {
-				salida.setError(true);
-				salida.setMensaje("Se está intentando actualizar un producto, esta acción no esta permitida");
+				salida.fallo("Se está intentando actualizar un producto, esta acción no esta permitida");
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			String accion = productoParam.getId() > 0 ? "actualizar" : "registrar";
-			salida.setMensaje("Se produjo un error inesperado al intentar " + accion + " el producto");
+			salida.fallo("Se produjo un error inesperado al intentar " + accion + " el producto");
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Transactional
 	@Override
 	public ResultadoProc<Producto> update(Producto producto) {
-		ResultadoProc<Producto> salida = new ResultadoProc<Producto>();
+		Builder<Producto> salida = new Builder<Producto>();
 		try {
 			String mensaje = "";
 			if (producto.getId() > 0) {
@@ -144,9 +135,8 @@ public class ProductoService implements IProductoService {
 				// Obtenemos las imágenes actuales del producto para compararlas con las nuevas
 				ResultadoProc<List<ImagenProducto>> imagenesOld = imagenProductoService.findAllByProducto(producto);
 				if (imagenesOld.isError()) {
-					salida.setError(true);
-					salida.setMensaje(imagenesOld.getMensaje());
-					return salida;
+					salida.fallo(imagenesOld.getMensaje());
+					return salida.build();
 				}
 
 				// Agregamos la referencia del producto en la imágen
@@ -154,30 +144,26 @@ public class ProductoService implements IProductoService {
 
 				// Actualizamos imágenes si es necesario
 				ResultadoProc<Boolean> imagenes = imagenProductoService.compareChangesAndSave(producto.getImagenes(),
-						imagenesOld.getResultado());
+						imagenesOld.getSalida());
 				if (imagenes.isError()) {
-					salida.setError(true);
-					salida.setMensaje(imagenes.getMensaje());
-					return salida;
+					salida.fallo(imagenes.getMensaje());
+					return salida.build();
 				}
 
 				productoRepository.save(producto);
 
-				producto = this.findById(producto.getId()).getResultado();
+				producto = this.findById(producto.getId()).getSalida();
 
-				salida.setResultado(producto);
-				salida.setMensaje(mensaje);
-				salida.setResultado(producto);
+				salida.exitoso(producto, mensaje);
 			} else {
-				salida.setError(true);
-				salida.setMensaje("Se está intentando registrar un nuevo producto, esta acción no esta permitida");
+				salida.fallo("Se está intentando registrar un nuevo producto, esta acción no esta permitida");
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			String accion = producto.getId() > 0 ? "actualizar" : "registrar";
-			salida.setMensaje("Se produjo un error inesperado al intentar " + accion + " el producto");
+			salida.fallo("Se produjo un error inesperado al intentar " + accion + " el producto");
 		}
-		return salida;
+		return salida.build();
 	}
 
 	/**
@@ -197,15 +183,14 @@ public class ProductoService implements IProductoService {
 
 	@Override
 	public ResultadoProc<Producto> changeState(int productoId) {
-		ResultadoProc<Producto> salida = new ResultadoProc<Producto>();
+		Builder<Producto> salida = new Builder<Producto>();
 		try {
 			String mensaje = "";
-			Producto productoOriginal = this.findById(productoId).getResultado();
+			Producto productoOriginal = this.findById(productoId).getSalida();
 			if (productoId > 0) {
 				if (productoOriginal == null) {
-					salida.setError(true);
-					salida.setMensaje("No se econtró el producto");
-					return salida;
+					salida.fallo("No se econtró el producto");
+					return salida.build();
 				}
 				productoOriginal.setActivo(!productoOriginal.isActivo());
 				if (productoOriginal.isActivo()) {
@@ -215,13 +200,12 @@ public class ProductoService implements IProductoService {
 				}
 			}
 			productoRepository.save(productoOriginal);
-			salida.setMensaje(mensaje);
-			salida.setResultado(productoOriginal);
+			salida.exitoso(productoOriginal, mensaje);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setMensaje("Se produjo un error inesperado al intentar cambiar el estado del producto");
+			salida.fallo("Se produjo un error inesperado al intentar cambiar el estado del producto");
 		}
-		return salida;
+		return salida.build();
 	}
 
 }

@@ -11,6 +11,7 @@ import cl.desquite.backend.entities.UsuarioRole;
 import cl.desquite.backend.repositories.UsuarioRolRepository;
 import cl.desquite.backend.services.IUsuarioRolService;
 import cl.desquite.backend.util.ResultadoProc;
+import cl.desquite.backend.util.ResultadoProc.Builder;
 import lombok.extern.apachecommons.CommonsLog;
 
 @Service
@@ -21,38 +22,33 @@ public class UsuarioRolService implements IUsuarioRolService {
 
 	@Override
 	public ResultadoProc<List<UsuarioRole>> saveAll(List<UsuarioRole> usuarioRoles) {
-		ResultadoProc<List<UsuarioRole>> salida = new ResultadoProc<List<UsuarioRole>>();
+		Builder<List<UsuarioRole>> salida = new Builder<List<UsuarioRole>>();
 		try {
-			salida.setResultado(usuarioRolRepository.saveAll(usuarioRoles));
+			usuarioRolRepository.saveAll(usuarioRoles);
 			if (usuarioRoles.size() > 1) {
-				salida.setMensaje("Roles asignados correctamente");
+				salida.exitoso(usuarioRoles, "Roles asignados correctamente");
 			} else {
-				salida.setMensaje("Role asignado correctamente");
+				salida.exitoso(usuarioRoles, "Role asignado correctamente");
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setError(true);
-			salida.setMensaje("Se produjo un error al intentar asignar los roles al usuario");
+			salida.fallo("Se produjo un error al intentar asignar los roles al usuario");
 		}
-		return salida;
+		return salida.build();
 
 	}
 
 	@Override
 	@Transactional
 	public ResultadoProc<Boolean> deleteAllByUsuario(Usuario usuario) {
-		ResultadoProc<Boolean> salida = new ResultadoProc<Boolean>();
+		Builder<Boolean> salida = new Builder<Boolean>();
 		try {
 			usuarioRolRepository.deleteAllByUsuario(usuario);
-			salida.setError(false);
-			salida.setResultado(true);
+			salida.exitoso(true);
 		} catch (Exception e) {
-			salida.setError(true);
-			salida.setMensaje("Se produjo un error al intentar eliminar los roles actuales del usuario");
-			salida.setResultado(false);
+			salida.fallo("Se produjo un error al intentar eliminar los roles actuales del usuario");
 		}
-		return salida;
-
+		return salida.build();
 	}
 
 }

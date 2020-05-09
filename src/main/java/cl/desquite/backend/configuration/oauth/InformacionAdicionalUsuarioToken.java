@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import cl.desquite.backend.entities.Role;
 import cl.desquite.backend.entities.Usuario;
 import cl.desquite.backend.services.IUsuarioService;
-import cl.desquite.backend.util.ResultadoProc;
 
 @Component
 public class InformacionAdicionalUsuarioToken implements TokenEnhancer {
@@ -26,8 +25,7 @@ public class InformacionAdicionalUsuarioToken implements TokenEnhancer {
 	@Override
 	public OAuth2AccessToken enhance(OAuth2AccessToken accessToken, OAuth2Authentication authentication) {
 
-		ResultadoProc<Usuario> usuarioResult = usuarioClienteService.findByEmail(authentication.getName());
-		Usuario usuario = usuarioResult.getResultado();
+		Usuario usuario = usuarioClienteService.findByEmail(authentication.getName()).getSalida();
 		Map<String, Object> info = new HashMap<>();
 		Set<String> roles = new HashSet<>();
 		usuario.getRoles().forEach((final Role rol) -> roles.add(rol.getNombre()));

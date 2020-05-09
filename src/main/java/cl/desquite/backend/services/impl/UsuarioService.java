@@ -6,7 +6,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.info.ProjectInfoProperties.Build;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.GrantedAuthority;
@@ -27,6 +30,7 @@ import cl.desquite.backend.repositories.UsuarioRepository;
 import cl.desquite.backend.services.IUsuarioRolService;
 import cl.desquite.backend.services.IUsuarioService;
 import cl.desquite.backend.util.ResultadoProc;
+import cl.desquite.backend.util.ResultadoProc.Builder;
 import lombok.extern.apachecommons.CommonsLog;
 
 @CommonsLog
@@ -38,8 +42,13 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 	@Autowired
 	IUsuarioRolService usuarioRolesService;
 
-	@Autowired
+	// @Autowired
 	BCryptPasswordEncoder passwordEncoder;
+
+	@PostConstruct
+	public void init() {
+		this.passwordEncoder = new BCryptPasswordEncoder();
+	}
 
 	@Override
 	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -50,7 +59,7 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 			throw new UsernameNotFoundException("Usuario o Clave incorrectos");
 		}
 
-		return new User(email, usuario.getClave(), true, true, true, true, getAuthorities(usuario.getRoles()));
+		return new User(email, usuario.getPassword(), true, true, true, true, getAuthorities(usuario.getRoles()));
 	}
 
 	private Collection<? extends GrantedAuthority> getAuthorities(Collection<Role> roles) {
@@ -79,180 +88,161 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 
 	@Override
 	public ResultadoProc<Usuario> findByEmail(String email) {
-		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
+		Builder<Usuario> salida = new Builder<Usuario>();
 		try {
 			Usuario usuario = usuarioRepository.findByEmail(email);
-			salida.setResultado(usuario);
-			salida.setMensaje("Usuario encontrado correctamente");
+			salida.exitoso(usuario, "Usuario encontrado correctamente");
 			if (usuario == null) {
-				salida.setError(true);
-				salida.setMensaje("No se ha encontrado el usuario " + email);
+				salida.fallo("No se ha encontrado el usuario " + email);
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setError(true);
-			salida.setMensaje("Se produjo un error inesperado al intentar obtener el usuario");
+			salida.fallo("Se produjo un error inesperado al intentar obtener el usuario");
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<Usuario> findById(int usuarioId) {
-		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
+		Builder<Usuario> salida = new Builder<Usuario>();
 		try {
 			Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
 			if (usuario == null) {
-				salida.setError(true);
-				salida.setMensaje("No se ha encontrado el usuario con el código " + usuarioId);
+				salida.fallo("No se ha encontrado el usuario con el código " + usuarioId);
 			}
-			salida.setResultado(usuario);
+			salida.exitoso(usuario);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setMensaje(
-					"Se produjo un error inesperado al intentar obtener el usuario con el código " + usuarioId);
+			salida.fallo("Se produjo un error inesperado al intentar obtener el usuario con el código " + usuarioId);
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<Usuario> findByIdAndActivoTrue(int usuarioId) {
-		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
+		Builder<Usuario> salida = new Builder<Usuario>();
 		try {
 			Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
-			salida.setResultado(usuario);
+			salida.exitoso(usuario);
 
 			if (usuario == null) {
-				salida.setError(true);
-				salida.setMensaje("No se ha encontrado el usuario con el código " + usuarioId);
+				salida.fallo("No se ha encontrado el usuario con el código " + usuarioId);
 			}
 			if (!usuario.isActivo()) {
-				salida.setError(true);
-				salida.setMensaje("El usuario con el código " + usuarioId + " se encuentra inactivo");
-				salida.setResultado(null);
+				salida.fallo("El usuario con el código " + usuarioId + " se encuentra inactivo");
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setMensaje(
-					"Se produjo un error inesperado al intentar obtener el usuario con el código " + usuarioId);
+			salida.fallo("Se produjo un error inesperado al intentar obtener el usuario con el código " + usuarioId);
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<Page<Usuario>> findAllPaginatedWithFilters(PageRequest pageable, String buscador) {
-		ResultadoProc<Page<Usuario>> salida = new ResultadoProc<Page<Usuario>>();
+		Builder<Page<Usuario>> salida = new Builder<Page<Usuario>>();
 		try {
 			Page<Usuario> usuarios = usuarioRepository.findAllPaginatedWithFilters(buscador, pageable);
-			salida.setResultado(usuarios);
+			salida.exitoso(usuarios);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setMensaje("Se produjo un error inesperado al intentar listar los usuarios");
+			salida.fallo("Se produjo un error inesperado al intentar listar los usuarios");
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Transactional
 	@Override
 	public ResultadoProc<Usuario> save(Usuario usuario) {
-		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
+		Builder<Usuario> salida = new Builder<Usuario>();
 		try {
 			String mensaje = "";
 			if (usuario.getId() == 0) {
 				if (this.isRegistered(usuario)) {
-					salida.setError(true);
-					salida.setMensaje("El usuario con el email " + usuario.getEmail() + " ya se encuentra registrado");
-					return salida;
+					salida.fallo("El usuario con el email " + usuario.getEmail() + " ya se encuentra registrado");
+					return salida.build();
 				}
 				mensaje = "Usuario registrado correctamente";
-				usuario.setClave(passwordEncoder.encode(usuario.getClave()));
+				usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
 
 				usuarioRepository.save(usuario);
 				List<UsuarioRole> roles = asignarRoles(usuario);
 
 				ResultadoProc<Boolean> salidaDelete = usuarioRolesService.deleteAllByUsuario(usuario);
 				if (salidaDelete.isError()) {
-					salida.setError(true);
-					salida.setMensaje(salidaDelete.getMensaje());
-					return salida;
+					salida.fallo(salidaDelete.getMensaje());
+					return salida.build();
 				}
 				ResultadoProc<List<UsuarioRole>> salidaRoles = usuarioRolesService.saveAll(roles);
 				if (salidaRoles.isError()) {
-					salida.setError(true);
-					salida.setMensaje(
+					salida.fallo(
 							"El usuario fue registrado correctamente, pero ocurrio un problema al intentar asignar el o los roles");
-					return salida;
+					return salida.build();
 				}
-				salida.setMensaje(mensaje);
+				salida.exitoso(usuario, mensaje);
 			} else {
-				salida.setError(true);
-				salida.setMensaje("Se está intentando editar un usuario, esta acción no está permitida");
+				salida.fallo("Se está intentando editar un usuario, esta acción no está permitida");
 			}
-
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			String accion = usuario.getId() > 0 ? "actualizar" : "registrar";
-			salida.setMensaje("Se produjo un error inesperado al intentar " + accion + " el usuario");
+			salida.fallo("Se produjo un error inesperado al intentar " + accion + " el usuario");
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Transactional
 	@Override
 	public ResultadoProc<Usuario> update(Usuario usuario) {
-		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
+		Builder<Usuario> salida = new Builder<Usuario>();
 		try {
 			String mensaje = "";
 			if (usuario.getId() > 0) {
 				mensaje = "Usuario actualizado correctamente";
-				Usuario usuarioOriginal = this.findById(usuario.getId()).getResultado();
+				Usuario usuarioOriginal = this.findById(usuario.getId()).getSalida();
 				if (usuarioOriginal == null) {
-					salida.setError(true);
-					salida.setMensaje("No se econtró el usuario");
-					return salida;
+					salida.fallo("No se econtró el usuario");
+					return salida.build();
 				}
-				usuario.setClave(usuarioOriginal.getClave());
+				usuario.setPassword(usuarioOriginal.getPassword());
 
 				usuarioRepository.save(usuario);
 				List<UsuarioRole> roles = asignarRoles(usuario);
 
 				ResultadoProc<Boolean> salidaDelete = usuarioRolesService.deleteAllByUsuario(usuario);
 				if (salidaDelete.isError()) {
-					salida.setError(true);
-					salida.setMensaje(salidaDelete.getMensaje());
-					return salida;
+					salida.fallo(salidaDelete.getMensaje());
+					return salida.build();
 				}
 				ResultadoProc<List<UsuarioRole>> salidaRoles = usuarioRolesService.saveAll(roles);
 				if (salidaRoles.isError()) {
-					salida.setError(true);
-					salida.setMensaje(
+					salida.fallo(
 							"El usuario fue registrado correctamente, pero ocurrio un problema al intentar asignar el o los roles");
-					return salida;
+					return salida.build();
 				}
 
-				salida.setMensaje(mensaje);
+				salida.exitoso(usuario, mensaje);
 			} else {
-				salida.setError(true);
-				salida.setMensaje("Se está intentando registrar un usuario, esta acción no está permitida");
+				salida.fallo("Se está intentando registrar un usuario, esta acción no está permitida");
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			String accion = usuario.getId() > 0 ? "actualizar" : "registrar";
-			salida.setMensaje("Se produjo un error inesperado al intentar " + accion + " el usuario");
+			salida.fallo("Se produjo un error inesperado al intentar " + accion + " el usuario");
 		}
-		return salida;
+		return salida.build();
 	}
 
 	@Override
 	public ResultadoProc<Usuario> changeState(int usuarioId) {
-		ResultadoProc<Usuario> salida = new ResultadoProc<Usuario>();
+		Builder<Usuario> salida = new Builder<Usuario>();
 		try {
 			String mensaje = "";
-			Usuario usuarioOriginal = this.findById(usuarioId).getResultado();
+			Usuario usuarioOriginal = this.findById(usuarioId).getSalida();
 			if (usuarioId > 0) {
 				if (usuarioOriginal == null) {
-					salida.setError(true);
-					salida.setMensaje("No se econtró el usuario");
-					return salida;
+					salida.fallo("No se econtró el usuario");
+					return salida.build();
 				}
 				usuarioOriginal.setActivo(!usuarioOriginal.isActivo());
 				if (usuarioOriginal.isActivo()) {
@@ -262,13 +252,12 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 				}
 			}
 			usuarioRepository.save(usuarioOriginal);
-			salida.setMensaje(mensaje);
-			salida.setResultado(usuarioOriginal);
+			salida.exitoso(usuarioOriginal, mensaje);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
-			salida.setMensaje("Se produjo un error inesperado al intentar cambiar el estado del usuario");
+			salida.fallo("Se produjo un error inesperado al intentar cambiar el estado del usuario");
 		}
-		return salida;
+		return salida.build();
 	}
 
 	private List<UsuarioRole> asignarRoles(Usuario usuario) {
@@ -286,7 +275,7 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 	 * @return si es <code>true</code> es porque el usuario esta registrado
 	 */
 	private boolean isRegistered(Usuario usuario) {
-		if (this.findByEmail(usuario.getEmail()).getResultado() != null) {
+		if (this.findByEmail(usuario.getEmail()).getSalida() != null) {
 			return true;
 		} else {
 			return false;

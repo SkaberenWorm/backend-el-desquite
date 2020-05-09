@@ -29,7 +29,7 @@ public interface IProductoService {
 	/**
 	 * Guarda un producto
 	 * 
-	 * @param producto {@link Producto}
+	 * @param producto {@link Producto} que se desea guardar
 	 * @return ResultadoProc&lt;Producto&gt; Producto guardado
 	 */
 	ResultadoProc<Producto> save(Producto producto);
@@ -65,7 +65,7 @@ public interface IProductoService {
 	 * Si activo es <code><b>false</b></code> lo cambia a <code><b>true</b></code>
 	 * <br>
 	 * 
-	 * @param usuarioId (Id del producto)
+	 * @param productoId (Id del producto)
 	 * @return ResultadoProc&lt;Producto&gt; El producto al que le fue cambiado el
 	 *         estado
 	 */
@@ -74,7 +74,7 @@ public interface IProductoService {
 	/**
 	 * Actualiza un producto
 	 * 
-	 * @param producto {@link Producto}
+	 * @param producto {@link Producto} que se desea actualizar
 	 * @return ResultadoProc&lt;Producto&gt; Producto actualizado
 	 */
 	ResultadoProc<Producto> update(Producto productoParam);
