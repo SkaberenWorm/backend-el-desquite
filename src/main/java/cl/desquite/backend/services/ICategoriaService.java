@@ -4,7 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import cl.desquite.backend.entities.Categoria;
-import cl.desquite.backend.util.ResultadoProc;
+import cl.desquite.backend.utils.ResultadoProc;
 
 public interface ICategoriaService {
 
@@ -42,6 +42,6 @@ public interface ICategoriaService {
 	 * @return ResultadoProc&lt;Page&lt;Categoria&gt;&gt; Una página de categorias
 	 *         coincidentes con los filtros
 	 */
-	ResultadoProc<Page<Categoria>> findAllPaginatedWithFilters(PageRequest pageable, String buscador);
+	ResultadoProc<Page<Categoria>> findAllPaginatedWithSearch(PageRequest pageable, String buscador);
 
 }

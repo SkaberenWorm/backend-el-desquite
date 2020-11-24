@@ -28,6 +28,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 	 * @return Page&lt;Usuario&gt;
 	 */
 	@Query("select u from Usuario u where u.nombre like %?1% or u.apellidos like %?1% or u.email like %?1%")
-	Page<Usuario> findAllPaginatedWithFilters(String query, Pageable pageable);
+	Page<Usuario> findAllPaginatedWithSearch(String query, Pageable pageable);
 
 }

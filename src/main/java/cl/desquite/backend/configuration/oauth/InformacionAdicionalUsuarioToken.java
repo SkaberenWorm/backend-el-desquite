@@ -25,7 +25,7 @@ public class InformacionAdicionalUsuarioToken implements TokenEnhancer {
 	@Override
 	public OAuth2AccessToken enhance(OAuth2AccessToken accessToken, OAuth2Authentication authentication) {
 
-		Usuario usuario = usuarioClienteService.findByEmail(authentication.getName()).getSalida();
+		Usuario usuario = usuarioClienteService.findByEmail(authentication.getName()).getResultado();
 		Map<String, Object> info = new HashMap<>();
 		Set<String> roles = new HashSet<>();
 		usuario.getRoles().forEach((final Role rol) -> roles.add(rol.getNombre()));

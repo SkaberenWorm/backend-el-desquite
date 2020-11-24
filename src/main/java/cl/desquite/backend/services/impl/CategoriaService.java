@@ -5,12 +5,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.apachecommons.CommonsLog;
+
 import cl.desquite.backend.entities.Categoria;
 import cl.desquite.backend.repositories.CategoriaRepository;
 import cl.desquite.backend.services.ICategoriaService;
-import cl.desquite.backend.util.ResultadoProc;
-import cl.desquite.backend.util.ResultadoProc.Builder;
-import lombok.extern.apachecommons.CommonsLog;
+import cl.desquite.backend.utils.ResultadoProc;
+import cl.desquite.backend.utils.ResultadoProc.Builder;
 
 @Service
 @CommonsLog
@@ -56,7 +57,7 @@ public class CategoriaService implements ICategoriaService {
 	}
 
 	@Override
-	public ResultadoProc<Page<Categoria>> findAllPaginatedWithFilters(PageRequest pageable, String buscador) {
+	public ResultadoProc<Page<Categoria>> findAllPaginatedWithSearch(PageRequest pageable, String buscador) {
 		Builder<Page<Categoria>> salida = new Builder<Page<Categoria>>();
 		try {
 

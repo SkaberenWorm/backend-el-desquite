@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import cl.desquite.backend.entities.Usuario;
 import cl.desquite.backend.services.IUsuarioService;
-import cl.desquite.backend.util.ResultadoProc;
-import cl.desquite.backend.util.SearchPagination;
+import cl.desquite.backend.utils.ResultadoProc;
+import cl.desquite.backend.utils.SearchPagination;
 
 @RestController
 @RequestMapping("/api/usuario")
@@ -40,13 +40,13 @@ public class UsuarioRestController {
 		return new ResponseEntity<ResultadoProc<Usuario>>(salida, HttpStatus.OK);
 	}
 
-	@PreAuthorize("hasAuthority('USUARIO_LISTAR')")
-	@PostMapping("/page-with-filters")
-	public ResponseEntity<ResultadoProc<Page<Usuario>>> findAllPaginatedWithFilters(
+	// @PreAuthorize("hasAuthority('USUARIO_LISTAR')")
+	@PostMapping("/page-all-by-search")
+	public ResponseEntity<ResultadoProc<Page<Usuario>>> findAllPaginatedWithSearch(
 			@RequestBody SearchPagination<String> searchPagination) {
 		PageRequest pageable = searchPagination.getPageRequest();
 		String query = searchPagination.getSeek();
-		ResultadoProc<Page<Usuario>> salida = usuarioService.findAllPaginatedWithFilters(pageable, query);
+		ResultadoProc<Page<Usuario>> salida = usuarioService.findAllPaginatedWithSearch(pageable, query);
 		return new ResponseEntity<ResultadoProc<Page<Usuario>>>(salida, HttpStatus.OK);
 	}
 
@@ -69,6 +69,12 @@ public class UsuarioRestController {
 	public ResponseEntity<ResultadoProc<Usuario>> update(@RequestBody Usuario usuario) {
 		ResultadoProc<Usuario> salida = usuarioService.update(usuario);
 		return new ResponseEntity<ResultadoProc<Usuario>>(salida, HttpStatus.OK);
+	}
+
+	@PostMapping("/new-token-for-change-password")
+	public ResponseEntity<ResultadoProc<Boolean>> createTokenForResetPassword(@RequestBody Usuario usuario) {
+		ResultadoProc<Boolean> usuarioToken = this.usuarioService.createTokenForResetPassword(usuario);
+		return new ResponseEntity<ResultadoProc<Boolean>>(usuarioToken, HttpStatus.OK);
 	}
 
 }

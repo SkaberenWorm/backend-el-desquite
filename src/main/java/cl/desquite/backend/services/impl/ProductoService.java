@@ -8,14 +8,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.extern.apachecommons.CommonsLog;
+
 import cl.desquite.backend.entities.ImagenProducto;
 import cl.desquite.backend.entities.Producto;
 import cl.desquite.backend.repositories.ProductoRepository;
 import cl.desquite.backend.services.IImagenProductoService;
 import cl.desquite.backend.services.IProductoService;
-import cl.desquite.backend.util.ResultadoProc;
-import cl.desquite.backend.util.ResultadoProc.Builder;
-import lombok.extern.apachecommons.CommonsLog;
+import cl.desquite.backend.utils.ResultadoProc;
+import cl.desquite.backend.utils.ResultadoProc.Builder;
 
 @Service
 @CommonsLog
@@ -76,7 +77,7 @@ public class ProductoService implements IProductoService {
 	}
 
 	@Override
-	public ResultadoProc<Page<Producto>> findAllPaginatedWithFilters(PageRequest pageable, String buscador,
+	public ResultadoProc<Page<Producto>> findAllPaginatedWithSearch(PageRequest pageable, String buscador,
 			List<Integer> categoriasId) {
 		Builder<Page<Producto>> salida = new Builder<Page<Producto>>();
 		try {
@@ -110,7 +111,7 @@ public class ProductoService implements IProductoService {
 					return salida.build();
 				}
 
-				producto.setImagenes(imagenes.getSalida());
+				producto.setImagenes(imagenes.getResultado());
 				salida.exitoso(producto, mensaje);
 			} else {
 				salida.fallo("Se está intentando actualizar un producto, esta acción no esta permitida");
@@ -144,7 +145,7 @@ public class ProductoService implements IProductoService {
 
 				// Actualizamos imágenes si es necesario
 				ResultadoProc<Boolean> imagenes = imagenProductoService.compareChangesAndSave(producto.getImagenes(),
-						imagenesOld.getSalida());
+						imagenesOld.getResultado());
 				if (imagenes.isError()) {
 					salida.fallo(imagenes.getMensaje());
 					return salida.build();
@@ -152,7 +153,7 @@ public class ProductoService implements IProductoService {
 
 				productoRepository.save(producto);
 
-				producto = this.findById(producto.getId()).getSalida();
+				producto = this.findById(producto.getId()).getResultado();
 
 				salida.exitoso(producto, mensaje);
 			} else {
@@ -186,7 +187,7 @@ public class ProductoService implements IProductoService {
 		Builder<Producto> salida = new Builder<Producto>();
 		try {
 			String mensaje = "";
-			Producto productoOriginal = this.findById(productoId).getSalida();
+			Producto productoOriginal = this.findById(productoId).getResultado();
 			if (productoId > 0) {
 				if (productoOriginal == null) {
 					salida.fallo("No se econtró el producto");

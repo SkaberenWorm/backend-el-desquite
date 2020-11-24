@@ -12,15 +12,22 @@ import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Data
 @Table(name = "roles")
+@AllArgsConstructor
 @NoArgsConstructor
+@Builder
+@EqualsAndHashCode(exclude = { "privilegios" })
+@ToString(exclude = { "privilegios" })
 public class Role implements Serializable {
 
 	private static final long serialVersionUID = -8933379875810486482L;
@@ -40,14 +47,16 @@ public class Role implements Serializable {
 	@JoinTable(name = "rol_privilegios", joinColumns = @JoinColumn(name = "rol_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "privilegio_id", referencedColumnName = "id"))
 	private Set<Privilegio> privilegios;
 
-	@Transient
-	private String privilegiosString;
+	// @Transient
+	// private String privilegiosString;
 
-	public String getPrivilegiosString() {
-		String privilegiosDescrip = "";
-		for (Privilegio privilegio : this.privilegios) {
-			privilegiosDescrip += privilegio.getDescripcion() + "\n";
-		}
-		return privilegiosDescrip;
-	}
+	// public String getPrivilegiosString() {
+	// String privilegiosDescrip = "";
+	// if (this.getPrivilegios() != null) {
+	// for (Privilegio privilegio : this.getPrivilegios()) {
+	// privilegiosDescrip += privilegio.getDescripcion() + "\n";
+	// }
+	// }
+	// return privilegiosDescrip;
+	// }
 }

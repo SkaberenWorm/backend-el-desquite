@@ -10,6 +10,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -17,6 +19,8 @@ import lombok.NoArgsConstructor;
 @Data
 @Table(name = "caracteristicas")
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Caracteristica implements Serializable {
 
 	private static final long serialVersionUID = 4760426588049428730L;

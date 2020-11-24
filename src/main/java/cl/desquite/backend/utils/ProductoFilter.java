@@ -1,4 +1,4 @@
-package cl.desquite.backend.util;
+package cl.desquite.backend.utils;
 
 import java.io.Serializable;
 import java.util.List;

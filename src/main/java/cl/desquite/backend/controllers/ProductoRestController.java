@@ -18,9 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import cl.desquite.backend.entities.Producto;
 import cl.desquite.backend.services.IProductoService;
-import cl.desquite.backend.util.ProductoFilter;
-import cl.desquite.backend.util.ResultadoProc;
-import cl.desquite.backend.util.SearchPagination;
+import cl.desquite.backend.utils.ProductoFilter;
+import cl.desquite.backend.utils.ResultadoProc;
+import cl.desquite.backend.utils.SearchPagination;
 
 @RequestMapping("/api/producto")
 @RestController
@@ -53,12 +53,12 @@ public class ProductoRestController {
 
 	@PreAuthorize("hasAuthority('PRODUCTO_LISTAR')")
 	@PostMapping("/page-with-filters")
-	public ResponseEntity<ResultadoProc<Page<Producto>>> findAllPaginatedWithFilters(
+	public ResponseEntity<ResultadoProc<Page<Producto>>> findAllPaginatedWithSearch(
 			@RequestBody SearchPagination<ProductoFilter> searchPagination) {
 		PageRequest pageable = searchPagination.getPageRequest();
 		String query = searchPagination.getSeek().getQuery();
 		List<Integer> categoriasId = searchPagination.getSeek().getCategoriasId();
-		ResultadoProc<Page<Producto>> salida = productoService.findAllPaginatedWithFilters(pageable, query,
+		ResultadoProc<Page<Producto>> salida = productoService.findAllPaginatedWithSearch(pageable, query,
 				categoriasId);
 		return new ResponseEntity<ResultadoProc<Page<Producto>>>(salida, HttpStatus.OK);
 	}

@@ -7,13 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.extern.apachecommons.CommonsLog;
+
 import cl.desquite.backend.entities.ImagenProducto;
 import cl.desquite.backend.entities.Producto;
 import cl.desquite.backend.repositories.ImagenProductoRepository;
 import cl.desquite.backend.services.IImagenProductoService;
-import cl.desquite.backend.util.ResultadoProc;
-import cl.desquite.backend.util.ResultadoProc.Builder;
-import lombok.extern.apachecommons.CommonsLog;
+import cl.desquite.backend.utils.ResultadoProc;
+import cl.desquite.backend.utils.ResultadoProc.Builder;
 
 @Service
 @CommonsLog

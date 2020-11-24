@@ -6,13 +6,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.extern.apachecommons.CommonsLog;
+
 import cl.desquite.backend.entities.Usuario;
 import cl.desquite.backend.entities.UsuarioRole;
 import cl.desquite.backend.repositories.UsuarioRolRepository;
 import cl.desquite.backend.services.IUsuarioRolService;
-import cl.desquite.backend.util.ResultadoProc;
-import cl.desquite.backend.util.ResultadoProc.Builder;
-import lombok.extern.apachecommons.CommonsLog;
+import cl.desquite.backend.utils.ResultadoProc;
+import cl.desquite.backend.utils.ResultadoProc.Builder;
 
 @Service
 @CommonsLog

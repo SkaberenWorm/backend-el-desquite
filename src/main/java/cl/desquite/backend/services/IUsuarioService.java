@@ -4,7 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import cl.desquite.backend.entities.Usuario;
-import cl.desquite.backend.util.ResultadoProc;
+import cl.desquite.backend.utils.ResultadoProc;
 
 public interface IUsuarioService {
 
@@ -43,7 +43,7 @@ public interface IUsuarioService {
 	 * @return ResultadoProc&lt;Page&lt;Usuario&gt;&gt; Una página de usuarios
 	 *         coincidentes con los filtros
 	 */
-	ResultadoProc<Page<Usuario>> findAllPaginatedWithFilters(PageRequest pageable, String buscador);
+	ResultadoProc<Page<Usuario>> findAllPaginatedWithSearch(PageRequest pageable, String buscador);
 
 	/**
 	 * Registra un nuevo usuario
@@ -74,4 +74,7 @@ public interface IUsuarioService {
 	 */
 	ResultadoProc<Usuario> update(Usuario usuario);
 
+	ResultadoProc<Boolean> createTokenForResetPassword(Usuario usuario);
+
+	ResultadoProc<Boolean> cambiarClave(int usuarioId, String password);
 }

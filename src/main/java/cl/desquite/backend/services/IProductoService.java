@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import cl.desquite.backend.entities.Producto;
-import cl.desquite.backend.util.ResultadoProc;
+import cl.desquite.backend.utils.ResultadoProc;
 
 public interface IProductoService {
 
@@ -55,7 +55,7 @@ public interface IProductoService {
 	 * @return ResultadoProc&lt;Page&lt;Producto&gt;&gt; Una página de productos
 	 *         coincidentes con los filtros
 	 */
-	ResultadoProc<Page<Producto>> findAllPaginatedWithFilters(PageRequest pageable, String buscador,
+	ResultadoProc<Page<Producto>> findAllPaginatedWithSearch(PageRequest pageable, String buscador,
 			List<Integer> categoriasId);
 
 	/**

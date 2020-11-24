@@ -9,6 +9,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -16,6 +18,8 @@ import lombok.NoArgsConstructor;
 @Table(name = "imagenes")
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ImagenProducto implements Serializable {
 
 	private static final long serialVersionUID = 5339201097303043913L;

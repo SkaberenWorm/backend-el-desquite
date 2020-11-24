@@ -4,7 +4,7 @@ import java.util.List;
 
 import cl.desquite.backend.entities.Usuario;
 import cl.desquite.backend.entities.UsuarioRole;
-import cl.desquite.backend.util.ResultadoProc;
+import cl.desquite.backend.utils.ResultadoProc;
 
 public interface IUsuarioRolService {
 

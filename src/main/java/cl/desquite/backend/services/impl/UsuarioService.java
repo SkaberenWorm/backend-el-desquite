@@ -5,13 +5,15 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.info.ProjectInfoProperties.Build;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
@@ -22,16 +24,20 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.extern.apachecommons.CommonsLog;
+
 import cl.desquite.backend.entities.Privilegio;
 import cl.desquite.backend.entities.Role;
 import cl.desquite.backend.entities.Usuario;
-import cl.desquite.backend.entities.UsuarioRole;
+import cl.desquite.backend.entities.UsuarioToken;
 import cl.desquite.backend.repositories.UsuarioRepository;
+import cl.desquite.backend.services.IEmailService;
 import cl.desquite.backend.services.IUsuarioRolService;
 import cl.desquite.backend.services.IUsuarioService;
-import cl.desquite.backend.util.ResultadoProc;
-import cl.desquite.backend.util.ResultadoProc.Builder;
-import lombok.extern.apachecommons.CommonsLog;
+import cl.desquite.backend.services.IUsuarioTokenService;
+import cl.desquite.backend.utils.ResultadoProc;
+import cl.desquite.backend.utils.ResultadoProc.Builder;
+import cl.desquite.backend.utils.Util;
 
 @CommonsLog
 @Service
@@ -39,10 +45,19 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 
 	@Autowired
 	UsuarioRepository usuarioRepository;
+
 	@Autowired
 	IUsuarioRolService usuarioRolesService;
 
-	// @Autowired
+	@Autowired
+	IUsuarioTokenService usuarioTokenService;
+
+	@Autowired
+	IEmailService emailService;
+
+	@Value("${sistema-front-url-base}")
+	private String urlBaseSistemaFront;
+
 	BCryptPasswordEncoder passwordEncoder;
 
 	@PostConstruct
@@ -56,6 +71,11 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 		Usuario usuario = usuarioRepository.findByEmail(email);
 		if (usuario == null) {
 			log.info("Usuario ingresado no existe");
+			throw new UsernameNotFoundException("Usuario o Clave incorrectos");
+		}
+
+		if (!usuario.isActivo()) {
+			log.info("Usuario inactivo");
 			throw new UsernameNotFoundException("Usuario o Clave incorrectos");
 		}
 
@@ -126,7 +146,7 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 			salida.exitoso(usuario);
 
 			if (usuario == null) {
-				salida.fallo("No se ha encontrado el usuario con el código " + usuarioId);
+				salida.fallo("No se ha encontrado el usuario");
 			}
 			if (!usuario.isActivo()) {
 				salida.fallo("El usuario con el código " + usuarioId + " se encuentra inactivo");
@@ -139,10 +159,10 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 	}
 
 	@Override
-	public ResultadoProc<Page<Usuario>> findAllPaginatedWithFilters(PageRequest pageable, String buscador) {
+	public ResultadoProc<Page<Usuario>> findAllPaginatedWithSearch(PageRequest pageable, String buscador) {
 		Builder<Page<Usuario>> salida = new Builder<Page<Usuario>>();
 		try {
-			Page<Usuario> usuarios = usuarioRepository.findAllPaginatedWithFilters(buscador, pageable);
+			Page<Usuario> usuarios = usuarioRepository.findAllPaginatedWithSearch(buscador, pageable);
 			salida.exitoso(usuarios);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
@@ -163,22 +183,12 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 					return salida.build();
 				}
 				mensaje = "Usuario registrado correctamente";
-				usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
-
 				usuarioRepository.save(usuario);
-				List<UsuarioRole> roles = asignarRoles(usuario);
+				// * Creamos el token
+				UsuarioToken usuarioToken = this.usuarioTokenService.save(new UsuarioToken(usuario)).getResultado();
+				// Enviamos correo para que el usuario ingrese su nueva password
+				this.sentEmailForNewPassword(usuario, usuarioToken);
 
-				ResultadoProc<Boolean> salidaDelete = usuarioRolesService.deleteAllByUsuario(usuario);
-				if (salidaDelete.isError()) {
-					salida.fallo(salidaDelete.getMensaje());
-					return salida.build();
-				}
-				ResultadoProc<List<UsuarioRole>> salidaRoles = usuarioRolesService.saveAll(roles);
-				if (salidaRoles.isError()) {
-					salida.fallo(
-							"El usuario fue registrado correctamente, pero ocurrio un problema al intentar asignar el o los roles");
-					return salida.build();
-				}
 				salida.exitoso(usuario, mensaje);
 			} else {
 				salida.fallo("Se está intentando editar un usuario, esta acción no está permitida");
@@ -199,28 +209,13 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 			String mensaje = "";
 			if (usuario.getId() > 0) {
 				mensaje = "Usuario actualizado correctamente";
-				Usuario usuarioOriginal = this.findById(usuario.getId()).getSalida();
+				Usuario usuarioOriginal = this.findById(usuario.getId()).getResultado();
 				if (usuarioOriginal == null) {
 					salida.fallo("No se econtró el usuario");
 					return salida.build();
 				}
 				usuario.setPassword(usuarioOriginal.getPassword());
-
 				usuarioRepository.save(usuario);
-				List<UsuarioRole> roles = asignarRoles(usuario);
-
-				ResultadoProc<Boolean> salidaDelete = usuarioRolesService.deleteAllByUsuario(usuario);
-				if (salidaDelete.isError()) {
-					salida.fallo(salidaDelete.getMensaje());
-					return salida.build();
-				}
-				ResultadoProc<List<UsuarioRole>> salidaRoles = usuarioRolesService.saveAll(roles);
-				if (salidaRoles.isError()) {
-					salida.fallo(
-							"El usuario fue registrado correctamente, pero ocurrio un problema al intentar asignar el o los roles");
-					return salida.build();
-				}
-
 				salida.exitoso(usuario, mensaje);
 			} else {
 				salida.fallo("Se está intentando registrar un usuario, esta acción no está permitida");
@@ -238,7 +233,7 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 		Builder<Usuario> salida = new Builder<Usuario>();
 		try {
 			String mensaje = "";
-			Usuario usuarioOriginal = this.findById(usuarioId).getSalida();
+			Usuario usuarioOriginal = this.findById(usuarioId).getResultado();
 			if (usuarioId > 0) {
 				if (usuarioOriginal == null) {
 					salida.fallo("No se econtró el usuario");
@@ -260,12 +255,94 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 		return salida.build();
 	}
 
-	private List<UsuarioRole> asignarRoles(Usuario usuario) {
-		List<UsuarioRole> roles = new ArrayList<>();
-		for (Role rol : usuario.getRoles()) {
-			roles.add(new UsuarioRole(0, usuario, rol));
+	@Override
+	public ResultadoProc<Boolean> cambiarClave(int usuarioId, String password) {
+		ResultadoProc.Builder<Boolean> salida = new ResultadoProc.Builder<Boolean>();
+		try {
+			Usuario usuario = this.findById(usuarioId).getResultado();
+			if (usuario == null) {
+				return salida.fallo("No se encontró el usuario");
+			}
+			usuario.setPassword(passwordEncoder.encode(password));
+			this.usuarioRepository.save(usuario);
+			return salida.exitoso(true);
+		} catch (Exception e) {
+			Util.printError("cambiarClave(" + usuarioId + ", \"**********\")", e);
+			return salida.fallo("Se produjo un error inespedado al intentar cambiar la clave");
 		}
-		return roles;
+	}
+
+	@Override
+	public ResultadoProc<Boolean> createTokenForResetPassword(Usuario usuario) {
+		ResultadoProc.Builder<Boolean> salida = new ResultadoProc.Builder<Boolean>();
+		try {
+			UsuarioToken usuarioToken = this.usuarioTokenService.save(new UsuarioToken(usuario)).getResultado();
+			boolean sendEmail = this.sentEmailForChangePassword(usuario, usuarioToken);
+			if (!sendEmail) {
+				return salida.fallo("Se produjo un error inesperado al intentar notificarle al usuario");
+			}
+			return salida.exitoso(true, "Se a creado un nuevo token para el usuario " + usuario.getNombreCompleto()
+					+ ", se le ha notificado por correo");
+		} catch (Exception e) {
+			Util.printError("createTokenForResetPassword(" + usuario.toString() + ")", e);
+			return salida
+					.fallo("Se produjo un error inesperado al intentar generar el token o al notificarle al usuario");
+		}
+	}
+
+	/**
+	 * Envia el correo al usuario para el ingreso de su clave
+	 * 
+	 * @param usuario
+	 * @param usuarioToken
+	 */
+	@Async
+	private CompletableFuture<Boolean> sentEmailForNewPassword(Usuario usuario, UsuarioToken usuarioToken) {
+		try {
+
+			if (usuarioToken != null) {
+				String token = usuarioToken.getToken();
+
+				String titulo = "Configura tu clave";
+				String sendTo = usuario.getEmail();
+				String nombreUsuario = usuario.getNombre() + " " + usuario.getApellidos();
+				String subject = "Haz sido registrado en 'El Desquite'";
+				String enlace = this.urlBaseSistemaFront + "cambiar-password/" + token;
+				String mensajeBtn = "llevame!";
+				String cuerpoEmail = "<p mb-1>" + nombreUsuario + ", <p>";
+				cuerpoEmail += "<p mb-1> Presiona el botón e ingresa tu clave para finalizar el proceso de registro<p>";
+
+				this.emailService.sendEmail(titulo, sendTo, nombreUsuario, subject, cuerpoEmail, enlace, mensajeBtn);
+			}
+		} catch (Exception e) {
+			Util.printError("sentEmail(" + usuario + ", " + usuarioToken + ")", e);
+		}
+		return CompletableFuture.completedFuture(true);
+	}
+
+	private boolean sentEmailForChangePassword(Usuario usuario, UsuarioToken usuarioToken) {
+		try {
+			if (usuarioToken != null) {
+				String token = usuarioToken.getToken();
+
+				String titulo = "Cambia tu clave";
+				String sendTo = usuario.getEmail();
+				String nombreUsuario = usuario.getNombre() + " " + usuario.getApellidos();
+				String subject = "Solicitud cambio de clave";
+				String enlace = this.urlBaseSistemaFront + "cambiar-password/" + token;
+				String mensajeBtn = "Cambiar";
+				String cuerpoEmail = "<p mb-1>" + nombreUsuario + ", <p>";
+				cuerpoEmail += "<p mb-1> Se ha solicitado un cambio de clave, para continuar presiona el botón<p>";
+
+				return this.emailService.sendEmailNoAsync(titulo, sendTo, nombreUsuario, subject, cuerpoEmail, enlace,
+						mensajeBtn);
+			} else {
+				return false;
+			}
+		} catch (Exception e) {
+			Util.printError("sentEmailForChangePassword(" + usuario + ", " + usuarioToken + ")", e);
+			return false;
+		}
 	}
 
 	/**
@@ -275,7 +352,7 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 	 * @return si es <code>true</code> es porque el usuario esta registrado
 	 */
 	private boolean isRegistered(Usuario usuario) {
-		if (this.findByEmail(usuario.getEmail()).getSalida() != null) {
+		if (this.findByEmail(usuario.getEmail()).getResultado() != null) {
 			return true;
 		} else {
 			return false;
