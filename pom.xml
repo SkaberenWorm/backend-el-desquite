@@ -26,7 +26,7 @@
 		0.0.1-SNAPSHOT
 	</version>
 	<packaging>
-		war
+		jar
 	</packaging>
 	<name>
 		desquite-backend
