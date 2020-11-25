@@ -183,6 +183,7 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 					return salida.build();
 				}
 				mensaje = "Usuario registrado correctamente";
+				usuario.setActivo(true);
 				usuarioRepository.save(usuario);
 				// * Creamos el token
 				UsuarioToken usuarioToken = this.usuarioTokenService.save(new UsuarioToken(usuario)).getResultado();
