@@ -40,7 +40,7 @@ public class UsuarioRestController {
 		return new ResponseEntity<ResultadoProc<Usuario>>(salida, HttpStatus.OK);
 	}
 
-	// @PreAuthorize("hasAuthority('USUARIO_LISTAR')")
+	@PreAuthorize("hasAuthority('USUARIO_LISTAR')")
 	@PostMapping("/page-all-by-search")
 	public ResponseEntity<ResultadoProc<Page<Usuario>>> findAllPaginatedWithSearch(
 			@RequestBody SearchPagination<String> searchPagination) {

@@ -68,9 +68,9 @@ public class EmailService implements IEmailService {
 				@Override
 				public void prepare(MimeMessage mimeMessage) throws MessagingException {
 					MimeMessageHelper message = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-					message.setFrom("Natura <no-reply@skaberen.cl>");
+					message.setFrom("El Desquite <no-reply@skaberen.cl>");
 					message.setTo(email);
-					if (production) {
+					if (!production) {
 						message.setCc(emails);
 					}
 					message.setSubject(subject);

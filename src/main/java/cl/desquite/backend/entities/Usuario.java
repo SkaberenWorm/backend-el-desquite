@@ -23,13 +23,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Entity
 @Table(name = "usuarios")
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(exclude = { "roles" })
@@ -53,6 +51,12 @@ public class Usuario implements Serializable {
 	private boolean activo;
 	@Transient
 	private String nombreCompleto;
+	@Column(name = "is_using_2fa")
+	private boolean isUsing2FA;
+	private String secret;
+
+	public Usuario() {
+	}
 
 	public Usuario(int id) {
 		this.id = id;

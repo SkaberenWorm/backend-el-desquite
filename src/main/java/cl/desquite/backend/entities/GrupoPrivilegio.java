@@ -4,14 +4,15 @@ import java.io.Serializable;
 import java.util.Set;
 
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import org.hibernate.annotations.Where;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,30 +22,28 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Entity
+@Table(name = "grupo_privilegios")
 @Data
-@Table(name = "roles")
-@AllArgsConstructor
-@NoArgsConstructor
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode(exclude = { "privilegios" })
 @ToString(exclude = { "privilegios" })
-public class Role implements Serializable {
+public class GrupoPrivilegio implements Serializable {
 
-	private static final long serialVersionUID = -8933379875810486482L;
+	private static final long serialVersionUID = 773944317678163276L;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int id;
+
 	private String nombre;
-	private String descripcion;
+	private int orden;
 	private boolean activo;
 
-	public Role(int id) {
-		this.id = id;
-	}
-
-	@ManyToMany(fetch = FetchType.EAGER)
-	@JoinTable(name = "rol_privilegios", joinColumns = @JoinColumn(name = "rol_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "privilegio_id", referencedColumnName = "id"))
+	@OneToMany(mappedBy = "grupo")
+	@JsonIgnoreProperties(value = { "grupo" })
+	@Where(clause = "activo = 1")
 	private Set<Privilegio> privilegios;
 
 }
