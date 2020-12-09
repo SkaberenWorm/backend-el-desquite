@@ -27,6 +27,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 	@Override
 	@Autowired
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		// Se define la clase que recupera los usuarios y el algoritmo para procesar las
+		// passwords
 		auth.userDetailsService(this.userDetailsService).passwordEncoder(passwordEncoder());
 	}
 
@@ -38,6 +40,10 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
+
+		// 1. Se indica que para el uso de las rutas se necesita autenticación
+		// 2. Se activa la configuración CORS con los valores por defecto
+		// 3. Se desactiva el filtro CSRF Se desactiva el uso de cookies
 		http.authorizeRequests().anyRequest().authenticated().and().csrf().disable().sessionManagement()
 				.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 	}

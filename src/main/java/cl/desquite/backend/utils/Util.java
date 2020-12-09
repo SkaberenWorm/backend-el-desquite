@@ -11,6 +11,22 @@ import lombok.extern.apachecommons.CommonsLog;
 @CommonsLog
 public abstract class Util {
 
+    // public static void setAuthentication() {
+    // Authentication authentication =
+    // SecurityContextHolder.getContext().getAuthentication();
+    // UserDetailsAdapter userDetailsAdapter = (UserDetailsAdapter)
+    // SecurityContextHolder.getContext()
+    // .getAuthentication().getPrincipal();
+    // List<GrantedAuthority> authorities = AuthorityUtils
+    // .createAuthorityList(userDetailsAdapter.getAccount().getRoles().toArray(new
+    // String[0]));
+
+    // Authentication newAuth = new
+    // UsernamePasswordAuthenticationToken(authentication.getPrincipal(),
+    // authentication.getCredentials(), authorities);
+    // SecurityContextHolder.getContext().setAuthentication(newAuth);
+    // }
+
     public static void printError(String methodFail, Exception e) {
         log.error(methodFail);
         log.error(e.getMessage());

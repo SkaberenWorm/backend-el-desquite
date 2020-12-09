@@ -17,12 +17,10 @@ import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import lombok.extern.apachecommons.CommonsLog;
-
+import cl.desquite.backend.entities.EmailData;
 import cl.desquite.backend.services.IEmailService;
 import cl.desquite.backend.utils.Util;
 
-@CommonsLog
 @Service
 public class EmailService implements IEmailService {
 
@@ -41,12 +39,11 @@ public class EmailService implements IEmailService {
 
 	@Async
 	@Override
-	public CompletableFuture<Boolean> sendEmail(String titulo, String sendTo, String nombreUsuario, String subject,
-			String mensaje, String enlace, String mensajeBtn) {
+	public CompletableFuture<Boolean> sendEmail(EmailData emailData) {
 
 		StringBuilder out = new StringBuilder();
 		String line;
-		final String email = sendTo;
+		final String email = emailData.getSendTo();
 		final String[] emails = new String[] { "ismael.c.26a@gmail.com" };
 		try {
 
@@ -57,10 +54,11 @@ public class EmailService implements IEmailService {
 			while ((line = reader3.readLine()) != null) {
 				out.append(line);
 			}
-			template = out.toString().replace("_title_", titulo.trim());
-			template = template.replace("_cuerpocorreo_", mensaje.trim());
-			template = template.replace("_enlace_", enlace.trim());
-			template = template.replace("_mesaje_btn_", mensajeBtn.trim());
+			template = out.toString().replace("_title_", emailData.getTitulo().trim());
+			template = template.replace("_cuerpocorreo_", emailData.getCuerpoEmail().trim());
+			template = template.replace("_enlace_", emailData.getEnlace().trim());
+			template = template.replace("_mesaje_btn_", emailData.getMensajeBtn().trim());
+			template = template.replace("_footercorreo_", emailData.getFooterEmail());
 			template = template.replace("_date_", new Date().toString());
 
 			final String txtemail = template;
@@ -70,29 +68,28 @@ public class EmailService implements IEmailService {
 					MimeMessageHelper message = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 					message.setFrom("El Desquite <no-reply@skaberen.cl>");
 					message.setTo(email);
-					if (!production) {
-						message.setCc(emails);
+					if (!production && !email.equals("ismael.c.26a@gmail.com")) {
+						message.setBcc(emails);
 					}
-					message.setSubject(subject);
+					message.setSubject(emailData.getSubject());
 					message.setText(txtemail, true);
 				}
 			});
 
 			return CompletableFuture.completedFuture(true);
 		} catch (Exception e) {
-			Util.printError("sendEmail(\"" + titulo + "\", \"" + sendTo + "\", \"" + nombreUsuario + "\", \"" + subject
-					+ "\", \"" + mensaje + "\", \"" + enlace + "\", \"" + mensajeBtn + "\")", e);
+			Util.printError("sendEmail(" + emailData.toString() + ")", e);
 			return CompletableFuture.completedFuture(false);
 		}
 	}
 
 	@Override
-	public Boolean sendEmailNoAsync(String titulo, String sendTo, String nombreUsuario, String subject, String mensaje,
-			String enlace, String mensajeBtn) {
+	public Boolean sendEmailNoAsync(EmailData emailData) {
 
 		StringBuilder out = new StringBuilder();
 		String line;
-		final String email = sendTo;
+		final String email = emailData.getSendTo();
+		;
 		final String[] emails = new String[] { "ismael.c.26a@gmail.com" };
 		try {
 
@@ -103,10 +100,12 @@ public class EmailService implements IEmailService {
 			while ((line = reader3.readLine()) != null) {
 				out.append(line);
 			}
-			template = out.toString().replace("_title_", titulo.trim());
-			template = template.replace("_cuerpocorreo_", mensaje.trim());
-			template = template.replace("_enlace_", enlace.trim());
-			template = template.replace("_mesaje_btn_", mensajeBtn.trim());
+
+			template = out.toString().replace("_title_", emailData.getTitulo().trim());
+			template = template.replace("_cuerpocorreo_", emailData.getCuerpoEmail().trim());
+			template = template.replace("_enlace_", emailData.getEnlace().trim());
+			template = template.replace("_mesaje_btn_", emailData.getMensajeBtn().trim());
+			template = template.replace("_footercorreo_", emailData.getFooterEmail());
 			template = template.replace("_date_", new Date().toString());
 
 			final String txtemail = template;
@@ -116,17 +115,16 @@ public class EmailService implements IEmailService {
 					MimeMessageHelper message = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 					message.setFrom("El Desquite <no-reply@skaberen.cl>");
 					message.setTo(email);
-					if (!production) {
-						message.setCc(emails);
+					if (!production && !email.equals("ismael.c.26a@gmail.com")) {
+						message.setBcc(emails);
 					}
-					message.setSubject(subject);
+					message.setSubject(emailData.getSubject());
 					message.setText(txtemail, true);
 				}
 			});
 			return true;
 		} catch (Exception e) {
-			Util.printError("sendEmailV2NoAsync(\"" + titulo + "\", \"" + sendTo + "\", \"" + nombreUsuario + "\", \""
-					+ subject + "\", \"" + mensaje + "\", \"" + enlace + "\", \"" + mensajeBtn + "\")", e);
+			Util.printError("sendEmail(" + emailData.toString() + ")", e);
 			return false;
 		}
 	}

@@ -5,9 +5,17 @@ import cl.desquite.backend.utils.ResultadoProc;
 
 public interface IUsuarioTokenService {
 
-    UsuarioToken findByToken(String token);
+    UsuarioToken findByTokenForNewPassword(String token);
+
+    UsuarioToken findByTokenForResetPassword(String token);
+
+    UsuarioToken findByTokenForUnlockUser(String token);
 
     ResultadoProc<UsuarioToken> save(UsuarioToken usuarioToken);
 
-    ResultadoProc<Boolean> validateToken(String token);
+    ResultadoProc<Boolean> validateTokenForNewPassword(String token);
+
+    ResultadoProc<Boolean> validateTokenForResetPassword(String token);
+
+    ResultadoProc<Boolean> validateTokenForUnlockUser(String token);
 }

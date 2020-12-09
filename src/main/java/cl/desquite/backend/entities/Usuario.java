@@ -1,6 +1,10 @@
 package cl.desquite.backend.entities;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import javax.persistence.Column;
@@ -18,6 +22,9 @@ import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -53,7 +60,17 @@ public class Usuario implements Serializable {
 	private String nombreCompleto;
 	@Column(name = "is_using_2fa")
 	private boolean isUsing2FA;
+	@JsonIgnore
 	private String secret;
+	@JsonIgnore
+	private int intentosLogin;
+
+	@JsonIgnore
+	@Column(name = "validated_2fa")
+	private boolean validated2Fa;
+
+	@JsonIgnore
+	private boolean validatedLogin;
 
 	public Usuario() {
 	}
@@ -76,6 +93,30 @@ public class Usuario implements Serializable {
 			return "";
 		}
 		return this.password;
+	}
+
+	public Collection<GrantedAuthority> getAuthorities(Usuario usuario) {
+		return getGrantedAuthorities(getPrivileges(usuario.getRoles()));
+	}
+
+	private Set<String> getPrivileges(Collection<Role> roles) {
+		Set<String> privileges = new HashSet<String>();
+		Set<Privilegio> collection = new HashSet<Privilegio>();
+		for (Role role : roles) {
+			collection.addAll(role.getPrivilegios());
+		}
+		for (Privilegio item : collection) {
+			privileges.add(item.getNombre());
+		}
+		return privileges;
+	}
+
+	private List<GrantedAuthority> getGrantedAuthorities(Set<String> privileges) {
+		List<GrantedAuthority> authorities = new ArrayList<>();
+		for (String privilege : privileges) {
+			authorities.add(new SimpleGrantedAuthority(privilege));
+		}
+		return authorities;
 	}
 
 }

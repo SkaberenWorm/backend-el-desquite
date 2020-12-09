@@ -35,6 +35,7 @@ public class UsuarioToken implements Serializable {
     private String token;
     private Date fechaCaducidad;
     private boolean activo;
+    private String tipo;
 
     @ManyToOne()
     @JoinColumn(name = "usuario_id")
@@ -50,5 +51,29 @@ public class UsuarioToken implements Serializable {
         this.token = UUID.randomUUID().toString();
         this.activo = true;
         this.usuario = usuario;
+    }
+
+    public boolean isForNewPassword() {
+        return this.tipo.toUpperCase().trim().equals("NEW_PASSWORD");
+    }
+
+    public void setForNewPassword() {
+        this.tipo = "NEW_PASSWORD";
+    }
+
+    public boolean isForResetPassword() {
+        return this.tipo.toUpperCase().trim().equals("RESET_PASSWORD");
+    }
+
+    public void setForResetPassword() {
+        this.tipo = "RESET_PASSWORD";
+    }
+
+    public boolean isForUnlockUser() {
+        return this.tipo.toUpperCase().trim().equals("UNLOCK_USUARIO");
+    }
+
+    public void setForUnlockedUser() {
+        this.tipo = "UNLOCK_USUARIO";
     }
 }

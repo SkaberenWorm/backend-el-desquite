@@ -1,5 +1,7 @@
 package cl.desquite.backend.services;
 
+import java.util.HashMap;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
@@ -77,4 +79,6 @@ public interface IUsuarioService {
 	ResultadoProc<Boolean> createTokenForResetPassword(Usuario usuario);
 
 	ResultadoProc<Boolean> cambiarClave(int usuarioId, String password);
+
+	ResultadoProc<Usuario> login(HashMap<String, String> credentials);
 }

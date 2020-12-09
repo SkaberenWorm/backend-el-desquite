@@ -18,11 +18,11 @@ public class UsuarioTokenService implements IUsuarioTokenService {
     UsuarioTokenRepository usuarioTokenRepository;
 
     @Override
-    public ResultadoProc<Boolean> validateToken(String token) {
+    public ResultadoProc<Boolean> validateTokenForNewPassword(String token) {
         ResultadoProc.Builder<Boolean> salida = new ResultadoProc.Builder<Boolean>();
         try {
             UsuarioToken usuarioToken = this.usuarioTokenRepository.findByToken(token);
-            if (usuarioToken == null) {
+            if (usuarioToken == null || !usuarioToken.isForNewPassword()) {
                 return salida.fallo("Token inválido");
             }
 
@@ -39,11 +39,85 @@ public class UsuarioTokenService implements IUsuarioTokenService {
     }
 
     @Override
-    public UsuarioToken findByToken(String token) {
+    public ResultadoProc<Boolean> validateTokenForResetPassword(String token) {
+        ResultadoProc.Builder<Boolean> salida = new ResultadoProc.Builder<Boolean>();
         try {
-            return this.usuarioTokenRepository.findByToken(token);
+            UsuarioToken usuarioToken = this.usuarioTokenRepository.findByToken(token);
+            if (usuarioToken == null || !usuarioToken.isForResetPassword()) {
+                return salida.fallo("Token inválido");
+            }
+
+            if (usuarioToken.getFechaCaducidad().before(new Date()) || !usuarioToken.isActivo()) {
+                return salida.fallo("Token caducado");
+            }
+
+            salida.exitoso(true);
         } catch (Exception e) {
-            Util.printError("findByToken(\"" + token + "\")", e);
+            Util.printError("validateToken(\"" + token + "\")", e);
+            salida.fallo("Se produjo un error inesperado al intentar validar el token del usuario");
+        }
+        return salida.build();
+    }
+
+    @Override
+    public ResultadoProc<Boolean> validateTokenForUnlockUser(String token) {
+        ResultadoProc.Builder<Boolean> salida = new ResultadoProc.Builder<Boolean>();
+        try {
+            UsuarioToken usuarioToken = this.usuarioTokenRepository.findByToken(token);
+            if (usuarioToken == null || !usuarioToken.isForUnlockUser()) {
+                return salida.fallo("Token inválido");
+            }
+
+            if (usuarioToken.getFechaCaducidad().before(new Date()) || !usuarioToken.isActivo()) {
+                return salida.fallo("Token caducado");
+            }
+
+            salida.exitoso(true);
+        } catch (Exception e) {
+            Util.printError("validateToken(\"" + token + "\")", e);
+            salida.fallo("Se produjo un error inesperado al intentar validar el token del usuario");
+        }
+        return salida.build();
+    }
+
+    @Override
+    public UsuarioToken findByTokenForNewPassword(String token) {
+        try {
+            UsuarioToken usuarioToken = this.usuarioTokenRepository.findByToken(token);
+            if (!usuarioToken.isForNewPassword()) {
+                return null;
+            }
+            return usuarioToken;
+        } catch (Exception e) {
+            Util.printError("findByTokenForNewPassword(\"" + token + "\")", e);
+            return null;
+        }
+    }
+
+    @Override
+    public UsuarioToken findByTokenForResetPassword(String token) {
+        try {
+            UsuarioToken usuarioToken = this.usuarioTokenRepository.findByToken(token);
+            if (!usuarioToken.isForResetPassword()) {
+                return null;
+            }
+            return usuarioToken;
+        } catch (Exception e) {
+            Util.printError("findByTokenForResetPassword(\"" + token + "\")", e);
+            return null;
+        }
+    }
+
+    @Override
+    public UsuarioToken findByTokenForUnlockUser(String token) {
+        try {
+            UsuarioToken usuarioToken = this.usuarioTokenRepository.findByToken(token);
+            if (!usuarioToken.isForUnlockUser()) {
+                return null;
+            }
+            return usuarioToken;
+        } catch (Exception e) {
+            Util.printError("findByTokenForUnlockUser(\"" + token + "\")", e);
             return null;
         }
     }
@@ -52,6 +126,9 @@ public class UsuarioTokenService implements IUsuarioTokenService {
     public ResultadoProc<UsuarioToken> save(UsuarioToken usuarioToken) {
         ResultadoProc.Builder<UsuarioToken> salida = new ResultadoProc.Builder<UsuarioToken>();
         try {
+            if (usuarioToken.getTipo() == null || usuarioToken.getTipo().isEmpty()) {
+                return salida.fallo("Se produjo un error, el tipo del token es obligatorio");
+            }
             salida.exitoso(this.usuarioTokenRepository.save(usuarioToken));
         } catch (Exception e) {
             Util.printError("save(" + usuarioToken.toString() + ")", e);

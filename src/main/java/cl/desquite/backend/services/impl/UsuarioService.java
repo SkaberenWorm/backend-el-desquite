@@ -1,10 +1,6 @@
 package cl.desquite.backend.services.impl;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.PostConstruct;
@@ -14,8 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -26,8 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.extern.apachecommons.CommonsLog;
 
-import cl.desquite.backend.entities.Privilegio;
-import cl.desquite.backend.entities.Role;
+import cl.desquite.backend.entities.EmailData;
 import cl.desquite.backend.entities.Usuario;
 import cl.desquite.backend.entities.UsuarioToken;
 import cl.desquite.backend.repositories.UsuarioRepository;
@@ -70,40 +63,36 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 		email = email.toLowerCase().trim();
 		Usuario usuario = usuarioRepository.findByEmail(email);
 		if (usuario == null) {
-			log.info("Usuario ingresado no existe");
+			log.warn("Usuario ingresado no existe");
 			throw new UsernameNotFoundException("Usuario o Clave incorrectos");
 		}
 
 		if (!usuario.isActivo()) {
-			log.info("Usuario inactivo");
+			log.warn("Usuario inactivo");
 			throw new UsernameNotFoundException("Usuario o Clave incorrectos");
 		}
 
-		return new User(email, usuario.getPassword(), true, true, true, true, getAuthorities(usuario.getRoles()));
-	}
-
-	private Collection<? extends GrantedAuthority> getAuthorities(Collection<Role> roles) {
-		return getGrantedAuthorities(getPrivileges(roles));
-	}
-
-	private Set<String> getPrivileges(Collection<Role> roles) {
-		Set<String> privileges = new HashSet<String>();
-		Set<Privilegio> collection = new HashSet<Privilegio>();
-		for (Role role : roles) {
-			collection.addAll(role.getPrivilegios());
+		// Verificamos que haya validado sus credenciales
+		if (!usuario.isValidatedLogin()) {
+			log.warn("No ha validado sus credenciales");
+			throw new UsernameNotFoundException("Usuario o Clave incorrectos");
 		}
-		for (Privilegio item : collection) {
-			privileges.add(item.getNombre());
-		}
-		return privileges;
-	}
 
-	private List<GrantedAuthority> getGrantedAuthorities(Set<String> privileges) {
-		List<GrantedAuthority> authorities = new ArrayList<>();
-		for (String privilege : privileges) {
-			authorities.add(new SimpleGrantedAuthority(privilege));
+		// Verificamos que haya validado su token 2FA si es que tiene
+		if (usuario.isUsing2FA() && !usuario.isValidated2Fa()) {
+			log.warn("No ha validado 2FA");
+			throw new UsernameNotFoundException("Usuario o Clave incorrectos");
 		}
-		return authorities;
+
+		// Si todo es correcto indicamos que:
+		// 1. El usaurio no ha validado la 2FA
+		// 2. El usuario no se ha validado sus credenciales
+		usuario.setValidated2Fa(false);
+		usuario.setValidatedLogin(false);
+		this.update(usuario);
+
+		return new User(email, usuario.getPassword(), usuario.isActivo(), true, true, true,
+				usuario.getAuthorities(usuario));
 	}
 
 	@Override
@@ -185,8 +174,10 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 				mensaje = "Usuario registrado correctamente";
 				usuario.setActivo(true);
 				usuarioRepository.save(usuario);
-				// * Creamos el token
-				UsuarioToken usuarioToken = this.usuarioTokenService.save(new UsuarioToken(usuario)).getResultado();
+				// Generamos un token para crear la password
+				UsuarioToken usuarioToken = new UsuarioToken(usuario);
+				usuarioToken.setForNewPassword();
+				usuarioToken = this.usuarioTokenService.save(usuarioToken).getResultado();
 				// Enviamos correo para que el usuario ingrese su nueva password
 				this.sentEmailForNewPassword(usuario, usuarioToken);
 
@@ -277,7 +268,9 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 	public ResultadoProc<Boolean> createTokenForResetPassword(Usuario usuario) {
 		ResultadoProc.Builder<Boolean> salida = new ResultadoProc.Builder<Boolean>();
 		try {
-			UsuarioToken usuarioToken = this.usuarioTokenService.save(new UsuarioToken(usuario)).getResultado();
+			UsuarioToken usuarioToken = new UsuarioToken(usuario);
+			usuarioToken.setForResetPassword();
+			this.usuarioTokenService.save(usuarioToken).getResultado();
 			boolean sendEmail = this.sentEmailForChangePassword(usuario, usuarioToken);
 			if (!sendEmail) {
 				return salida.fallo("Se produjo un error inesperado al intentar notificarle al usuario");
@@ -291,58 +284,52 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 		}
 	}
 
-	/**
-	 * Envia el correo al usuario para el ingreso de su clave
-	 * 
-	 * @param usuario
-	 * @param usuarioToken
-	 */
-	@Async
-	private CompletableFuture<Boolean> sentEmailForNewPassword(Usuario usuario, UsuarioToken usuarioToken) {
+	@Override
+	public ResultadoProc<Usuario> login(HashMap<String, String> credentials) {
+		ResultadoProc.Builder<Usuario> salida = new ResultadoProc.Builder<>();
 		try {
-
-			if (usuarioToken != null) {
-				String token = usuarioToken.getToken();
-
-				String titulo = "Configura tu clave";
-				String sendTo = usuario.getEmail();
-				String nombreUsuario = usuario.getNombre() + " " + usuario.getApellidos();
-				String subject = "Haz sido registrado en 'El Desquite'";
-				String enlace = this.urlBaseSistemaFront + "cambiar-password/" + token;
-				String mensajeBtn = "llevame!";
-				String cuerpoEmail = "<p mb-1>" + nombreUsuario + ", <p>";
-				cuerpoEmail += "<p mb-1> Presiona el botón e ingresa tu clave para finalizar el proceso de registro<p>";
-
-				this.emailService.sendEmail(titulo, sendTo, nombreUsuario, subject, cuerpoEmail, enlace, mensajeBtn);
+			Usuario usuario = this.findByEmail(credentials.get("usuario")).getResultado();
+			if (usuario == null) {
+				return salida.fallo("Credenciales incorrectas");
 			}
-		} catch (Exception e) {
-			Util.printError("sentEmail(" + usuario + ", " + usuarioToken + ")", e);
-		}
-		return CompletableFuture.completedFuture(true);
-	}
+			if (!usuario.isActivo()) {
+				return salida.fallo("Usuario bloqueado");
+			}
 
-	private boolean sentEmailForChangePassword(Usuario usuario, UsuarioToken usuarioToken) {
-		try {
-			if (usuarioToken != null) {
-				String token = usuarioToken.getToken();
+			String encodedPassword = usuario.getPassword();
+			boolean isPasswordMatch = passwordEncoder.matches(credentials.get("password"), encodedPassword);
 
-				String titulo = "Cambia tu clave";
-				String sendTo = usuario.getEmail();
-				String nombreUsuario = usuario.getNombre() + " " + usuario.getApellidos();
-				String subject = "Solicitud cambio de clave";
-				String enlace = this.urlBaseSistemaFront + "cambiar-password/" + token;
-				String mensajeBtn = "Cambiar";
-				String cuerpoEmail = "<p mb-1>" + nombreUsuario + ", <p>";
-				cuerpoEmail += "<p mb-1> Se ha solicitado un cambio de clave, para continuar presiona el botón<p>";
-
-				return this.emailService.sendEmailNoAsync(titulo, sendTo, nombreUsuario, subject, cuerpoEmail, enlace,
-						mensajeBtn);
+			if (isPasswordMatch) {
+				// 1. Marcamos que ya pasó por el login correctamente
+				// 2. Reseteamos los intentos de login
+				usuario.setValidatedLogin(true);
+				usuario.setIntentosLogin(5);
+				this.update(usuario);
+				return salida.exitoso(usuario, "Credenciales correctas");
 			} else {
-				return false;
+				int intentosRestantes = usuario.getIntentosLogin() - 1;
+				String mensajeIntentos;
+				if (intentosRestantes == 0) {
+					mensajeIntentos = "su usuario ha sido bloqueado";
+					usuario.setActivo(false);
+					UsuarioToken usuarioToken = new UsuarioToken(usuario);
+					usuarioToken.setForUnlockedUser();
+					usuarioToken = this.usuarioTokenService.save(usuarioToken).getResultado();
+					this.sendEmailForUnlockUser(usuario, usuarioToken);
+				} else if (intentosRestantes == 1) {
+					mensajeIntentos = "tiene 1 intento más";
+				} else {
+					mensajeIntentos = "tiene " + intentosRestantes + " intentos más";
+				}
+
+				usuario.setIntentosLogin(intentosRestantes);
+				usuario.setValidatedLogin(false);
+				this.update(usuario);
+
+				return salida.fallo("Credenciales incorrectas, " + mensajeIntentos);
 			}
 		} catch (Exception e) {
-			Util.printError("sentEmailForChangePassword(" + usuario + ", " + usuarioToken + ")", e);
-			return false;
+			return salida.fallo("Se produjo un error inesperado al intentar verificar el usuario");
 		}
 	}
 
@@ -356,6 +343,55 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 		if (this.findByEmail(usuario.getEmail()).getResultado() != null) {
 			return true;
 		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Envia el correo al usuario para el ingreso de su clave
+	 * 
+	 * @param usuario
+	 * @param usuarioToken
+	 */
+	@Async
+	private CompletableFuture<Boolean> sentEmailForNewPassword(Usuario usuario, UsuarioToken usuarioToken) {
+		try {
+			if (usuarioToken != null) {
+				EmailData emailData = new EmailData();
+				emailData.setEmailForNewPassword(urlBaseSistemaFront, usuario, usuarioToken);
+				this.emailService.sendEmail(emailData);
+			}
+		} catch (Exception e) {
+			Util.printError("sentEmailForNewPassword(" + usuario + ", " + usuarioToken + ")", e);
+		}
+		return CompletableFuture.completedFuture(true);
+	}
+
+	@Async
+	private CompletableFuture<Boolean> sendEmailForUnlockUser(Usuario usuario, UsuarioToken usuarioToken) {
+		try {
+			if (usuarioToken != null) {
+				EmailData emailData = new EmailData();
+				emailData.setEmailForUnlockUser(urlBaseSistemaFront, usuario, usuarioToken);
+				this.emailService.sendEmail(emailData);
+			}
+		} catch (Exception e) {
+			Util.printError("sentEmailUsuarioBloqueado(" + usuario + ", " + usuarioToken + ")", e);
+		}
+		return CompletableFuture.completedFuture(true);
+	}
+
+	private boolean sentEmailForChangePassword(Usuario usuario, UsuarioToken usuarioToken) {
+		try {
+			if (usuarioToken != null) {
+				EmailData emailData = new EmailData();
+				emailData.setEmailForResetPassword(urlBaseSistemaFront, usuario, usuarioToken);
+				return this.emailService.sendEmailNoAsync(emailData);
+			} else {
+				return false;
+			}
+		} catch (Exception e) {
+			Util.printError("sentEmailForChangePassword(" + usuario + ", " + usuarioToken + ")", e);
 			return false;
 		}
 	}
