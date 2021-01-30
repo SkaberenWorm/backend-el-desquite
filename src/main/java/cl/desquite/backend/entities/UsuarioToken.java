@@ -76,4 +76,5 @@ public class UsuarioToken implements Serializable {
     public void setForUnlockedUser() {
         this.tipo = "UNLOCK_USUARIO";
     }
+
 }

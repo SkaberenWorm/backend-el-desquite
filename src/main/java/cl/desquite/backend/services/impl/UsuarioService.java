@@ -1,6 +1,5 @@
 package cl.desquite.backend.services.impl;
 
-import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.PostConstruct;
@@ -20,9 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.extern.apachecommons.CommonsLog;
 
-import cl.desquite.backend.entities.EmailData;
 import cl.desquite.backend.entities.Usuario;
 import cl.desquite.backend.entities.UsuarioToken;
+import cl.desquite.backend.models.CredentialLogin;
+import cl.desquite.backend.models.EmailData;
 import cl.desquite.backend.repositories.UsuarioRepository;
 import cl.desquite.backend.services.IEmailService;
 import cl.desquite.backend.services.IUsuarioRolService;
@@ -47,6 +47,9 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 
 	@Autowired
 	IEmailService emailService;
+
+	@Value("${intentos-login}")
+	private int intentosLogin;
 
 	@Value("${sistema-front-url-base}")
 	private String urlBaseSistemaFront;
@@ -173,15 +176,21 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 				}
 				mensaje = "Usuario registrado correctamente";
 				usuario.setActivo(true);
+				usuario.setEmail(usuario.getEmail().toLowerCase().trim());
 				usuarioRepository.save(usuario);
 				// Generamos un token para crear la password
 				UsuarioToken usuarioToken = new UsuarioToken(usuario);
 				usuarioToken.setForNewPassword();
-				usuarioToken = this.usuarioTokenService.save(usuarioToken).getResultado();
-				// Enviamos correo para que el usuario ingrese su nueva password
-				this.sentEmailForNewPassword(usuario, usuarioToken);
+				ResultadoProc<UsuarioToken> usuarioTokenResult = this.usuarioTokenService.save(usuarioToken);
 
-				salida.exitoso(usuario, mensaje);
+				if (usuarioTokenResult.isError()) {
+					return salida.fallo(
+							"Usuario registrado correctamente, pero no se ha podido notificar al email para que ingrese su clave, favor genere un nuevo token para el usuario");
+				} else {
+					// Enviamos correo para que el usuario ingrese su nueva password
+					this.sentEmailForNewPassword(usuario, usuarioToken);
+					return salida.exitoso(usuario, mensaje);
+				}
 			} else {
 				salida.fallo("Se está intentando editar un usuario, esta acción no está permitida");
 			}
@@ -207,6 +216,7 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 					return salida.build();
 				}
 				usuario.setPassword(usuarioOriginal.getPassword());
+				usuario.setEmail(usuario.getEmail().toLowerCase().trim());
 				usuarioRepository.save(usuario);
 				salida.exitoso(usuario, mensaje);
 			} else {
@@ -270,6 +280,11 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 		try {
 			UsuarioToken usuarioToken = new UsuarioToken(usuario);
 			usuarioToken.setForResetPassword();
+			if (usuarioToken.getTipo() == null || usuarioToken.getTipo().isEmpty()) {
+				Util.printError("createTokenForResetPassword(" + usuario.toString() + ")",
+						new Exception("No se ha asignado el tipo de token"));
+				return salida.fallo("Se produjo un error inesperado al intentar notificarle al usuario");
+			}
 			this.usuarioTokenService.save(usuarioToken).getResultado();
 			boolean sendEmail = this.sentEmailForChangePassword(usuario, usuarioToken);
 			if (!sendEmail) {
@@ -285,10 +300,10 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 	}
 
 	@Override
-	public ResultadoProc<Usuario> login(HashMap<String, String> credentials) {
+	public ResultadoProc<Usuario> login(CredentialLogin credentials) {
 		ResultadoProc.Builder<Usuario> salida = new ResultadoProc.Builder<>();
 		try {
-			Usuario usuario = this.findByEmail(credentials.get("usuario")).getResultado();
+			Usuario usuario = this.findByEmail(credentials.getUsuario()).getResultado();
 			if (usuario == null) {
 				return salida.fallo("Credenciales incorrectas");
 			}
@@ -297,20 +312,20 @@ public class UsuarioService implements IUsuarioService, UserDetailsService {
 			}
 
 			String encodedPassword = usuario.getPassword();
-			boolean isPasswordMatch = passwordEncoder.matches(credentials.get("password"), encodedPassword);
+			boolean isPasswordMatch = passwordEncoder.matches(credentials.getPassword(), encodedPassword);
 
 			if (isPasswordMatch) {
 				// 1. Marcamos que ya pasó por el login correctamente
 				// 2. Reseteamos los intentos de login
 				usuario.setValidatedLogin(true);
-				usuario.setIntentosLogin(5);
+				usuario.setIntentosLogin(intentosLogin);
 				this.update(usuario);
 				return salida.exitoso(usuario, "Credenciales correctas");
 			} else {
 				int intentosRestantes = usuario.getIntentosLogin() - 1;
 				String mensajeIntentos;
 				if (intentosRestantes == 0) {
-					mensajeIntentos = "su usuario ha sido bloqueado";
+					mensajeIntentos = "su usuario ha sido bloqueado, le hemos envíado un email con las indicaciones para el desbloqueo";
 					usuario.setActivo(false);
 					UsuarioToken usuarioToken = new UsuarioToken(usuario);
 					usuarioToken.setForUnlockedUser();

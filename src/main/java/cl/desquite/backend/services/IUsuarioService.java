@@ -1,11 +1,10 @@
 package cl.desquite.backend.services;
 
-import java.util.HashMap;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import cl.desquite.backend.entities.Usuario;
+import cl.desquite.backend.models.CredentialLogin;
 import cl.desquite.backend.utils.ResultadoProc;
 
 public interface IUsuarioService {
@@ -80,5 +79,5 @@ public interface IUsuarioService {
 
 	ResultadoProc<Boolean> cambiarClave(int usuarioId, String password);
 
-	ResultadoProc<Usuario> login(HashMap<String, String> credentials);
+	ResultadoProc<Usuario> login(CredentialLogin credentials);
 }

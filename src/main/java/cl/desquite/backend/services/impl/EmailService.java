@@ -17,7 +17,7 @@ import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import cl.desquite.backend.entities.EmailData;
+import cl.desquite.backend.models.EmailData;
 import cl.desquite.backend.services.IEmailService;
 import cl.desquite.backend.utils.Util;
 
@@ -89,7 +89,6 @@ public class EmailService implements IEmailService {
 		StringBuilder out = new StringBuilder();
 		String line;
 		final String email = emailData.getSendTo();
-		;
 		final String[] emails = new String[] { "ismael.c.26a@gmail.com" };
 		try {
 
@@ -124,7 +123,7 @@ public class EmailService implements IEmailService {
 			});
 			return true;
 		} catch (Exception e) {
-			Util.printError("sendEmail(" + emailData.toString() + ")", e);
+			Util.printError("sendEmailNoAsync(" + emailData.toString() + ")", e);
 			return false;
 		}
 	}

@@ -84,6 +84,10 @@ public class Usuario implements Serializable {
 	@JsonIgnoreProperties(value = { "privilegios" })
 	private Set<Role> roles;
 
+	public String getEmail() {
+		return this.email.toLowerCase().trim();
+	}
+
 	public String getNombreCompleto() {
 		return (this.nombre + " " + this.apellidos);
 	}

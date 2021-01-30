@@ -2,6 +2,7 @@ package cl.desquite.backend.configuration.oauth;
 
 import java.util.Arrays;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,14 +18,26 @@ import org.springframework.web.filter.CorsFilter;
 @Configuration
 @EnableResourceServer
 public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
+
+	@Value("${production}")
+	private boolean production;
+
 	@Override
 	public void configure(HttpSecurity http) throws Exception {
-		http.authorizeRequests().antMatchers("/test/**", "/login").permitAll()
-				//
-				// .anyRequest().authenticated()
-				.anyRequest().permitAll()
-				//
-				.and().cors().configurationSource(corsConfigurationSource());
+
+		String[] matchers = null;
+		if (production) {
+			matchers = new String[] { "/test", "/login", "/api/usuario/free/**", "/usuario-token/free/**",
+					"/two-factor/free/**" };
+		} else {
+			matchers = new String[] { "/test", "/login", "/api/usuario/free/**", "/usuario-token/free/**",
+					"/two-factor/free/**", "/swagger-ui.html", "/webjars/**", "/v2/api-docs",
+					"/swagger-resources/configuration/ui", "/swagger-resources",
+					"/swagger-resources/configuration/security" };
+		}
+
+		http.authorizeRequests().antMatchers(matchers).permitAll().anyRequest().authenticated().and().cors()
+				.configurationSource(corsConfigurationSource());
 	}
 
 	@Bean

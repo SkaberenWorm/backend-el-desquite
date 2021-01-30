@@ -4,7 +4,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.springframework.scheduling.annotation.Async;
 
-import cl.desquite.backend.entities.EmailData;
+import cl.desquite.backend.models.EmailData;
 
 public interface IEmailService {
 
